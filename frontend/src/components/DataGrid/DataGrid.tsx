@@ -32,7 +32,8 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize] = useState(50)
+  const [pageSize, setPageSize] = useState(50)  // Made configurable
+  const [jumpToPage, setJumpToPage] = useState('')  // For page jump input
   const [sortRules, setSortRules] = useState<Array<{column: string, order: SortOrder}>>([])
   const [filters, setFilters] = useState<Map<string, FilterRule>>(new Map())
   const [searchResults, setSearchResults] = useState<SearchResponse | null>(null)
@@ -203,7 +204,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     if (currentFile) {
       loadData(1)
     }
-  }, [sortRules, filters, columnSearches])
+  }, [sortRules, filters, columnSearches, pageSize])  // Added pageSize dependency
 
   const handleSort = (column: string, order: SortOrder) => {
     setSortRules([{ column, order }])
@@ -265,6 +266,20 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     }
   }
 
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setCurrentPage(1)  // Reset to first page
+    // loadData will be triggered by useEffect
+  }
+
+  const handleJumpToPage = () => {
+    const pageNum = parseInt(jumpToPage)
+    if (!isNaN(pageNum) && pageNum >= 1 && data && pageNum <= data.total_pages) {
+      handlePageChange(pageNum)
+      setJumpToPage('')
+    }
+  }
+
   const clearAllSearches = () => {
     setSearchResults(null)
     setColumnSearches(new Map())
@@ -320,10 +335,36 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
             
             {data && (
               <>
+                {/* Page Size Selector */}
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-600">Show:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                    className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={200}>200</option>
+                  </select>
+                  <span className="text-sm text-gray-600">per page</span>
+                </div>
+                
+                {/* Page Info */}
                 <span className="text-sm text-gray-600">
                   Page {data.page} of {data.total_pages} ({data.total_records.toLocaleString()} total)
                 </span>
+                
+                {/* Page Navigation */}
                 <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handlePageChange(1)}
+                    disabled={!data.has_prev || loading}
+                    className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                  >
+                    « First
+                  </button>
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={!data.has_prev || loading}
@@ -331,12 +372,42 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
+                  
+                  {/* Page Jump */}
+                  <div className="flex items-center space-x-1">
+                    <span className="text-sm text-gray-600">Go to:</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={data.total_pages}
+                      value={jumpToPage}
+                      onChange={(e) => setJumpToPage(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleJumpToPage()}
+                      className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder={String(currentPage)}
+                    />
+                    <button
+                      onClick={handleJumpToPage}
+                      disabled={loading}
+                      className="px-2 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      Go
+                    </button>
+                  </div>
+                  
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={!data.has_next || loading}
                     className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
                   >
                     <ChevronRight className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(data.total_pages)}
+                    disabled={!data.has_next || loading}
+                    className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                  >
+                    Last »
                   </button>
                 </div>
               </>
@@ -358,53 +429,55 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
       )}
 
       {/* Data Table */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-32">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             <span className="ml-2 text-gray-600">Loading data...</span>
           </div>
         ) : data ? (
-          <table className="w-full">
-            <thead className="sticky top-0 bg-gray-50">
-              <tr>
-                {getVisibleColumnsInOrder().map((column) => (
-                  <ColumnHeader
-                    key={column.name}
-                    column={column.name}
-                    dataType={column.data_type}
-                    sampleValues={column.sample_values}
-                    sortOrder={sortRules.find(r => r.column === column.name)?.order}
-                    hasFilter={filters.has(column.name)}
-                    onSort={handleSort}
-                    onFilter={handleFilter}
-                    onAnalyze={handleAnalyze}
-                    onColumnSearch={handleColumnSearch}
-                  />
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {data.data.map((row, rowIndex) => (
-                <tr 
-                  key={rowIndex} 
-                  className={`hover:bg-gray-50 group ${
-                    highlightRows.has(rowIndex) ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''
-                  }`}
-                >
+          <div className="h-full overflow-auto">
+            <table className="w-full">
+              <thead className="sticky top-0 bg-gray-50 z-10">
+                <tr>
                   {getVisibleColumnsInOrder().map((column) => (
-                    <DataCell
+                    <ColumnHeader
                       key={column.name}
-                      value={row[column.name]}
                       column={column.name}
-                      rowIndex={(currentPage - 1) * pageSize + rowIndex}
-                      maxWidth={300}
+                      dataType={column.data_type}
+                      sampleValues={column.sample_values}
+                      sortOrder={sortRules.find(r => r.column === column.name)?.order}
+                      hasFilter={filters.has(column.name)}
+                      onSort={handleSort}
+                      onFilter={handleFilter}
+                      onAnalyze={handleAnalyze}
+                      onColumnSearch={handleColumnSearch}
                     />
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {data.data.map((row, rowIndex) => (
+                  <tr 
+                    key={rowIndex} 
+                    className={`hover:bg-gray-50 group ${
+                      highlightRows.has(rowIndex) ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''
+                    }`}
+                  >
+                    {getVisibleColumnsInOrder().map((column) => (
+                      <DataCell
+                        key={column.name}
+                        value={row[column.name]}
+                        column={column.name}
+                        rowIndex={(currentPage - 1) * pageSize + rowIndex}
+                        maxWidth={300}
+                      />
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className="flex items-center justify-center h-32">
             <span className="text-gray-500">No data available</span>

@@ -21,13 +21,15 @@ class DataService:
         # Create streamer
         streamer = JSONLStreamer(metadata.file_path)
         
-        # Calculate pagination
-        start_offset = (request.page - 1) * request.page_size
+        # For filtered/searched data, we need to process more records
+        # Start with a larger chunk to account for filtering
+        chunk_size = max(request.page_size * 10, 1000)
+        start_offset = max(0, (request.page - 1) * request.page_size - chunk_size // 2)
         
         # Get raw data
         records = list(streamer.stream_records(
             start_offset=start_offset,
-            limit=request.page_size * 2  # Get extra to handle filtering
+            limit=chunk_size
         ))
         
         # Apply filters
@@ -42,18 +44,40 @@ class DataService:
         if request.sort:
             records = self._apply_sorting(records, request.sort)
         
-        # Trim to page size
-        records = records[:request.page_size]
+        # Calculate total filtered records (approximate)
+        total_filtered = len(records) if len(records) < chunk_size else metadata.total_records
         
-        # Calculate pagination info
-        total_pages = math.ceil(metadata.total_records / request.page_size)
+        # Calculate pagination for current page
+        page_start = (request.page - 1) * request.page_size
+        page_end = page_start + request.page_size
+        
+        # If we have filters/search, adjust the pagination
+        if request.filters or request.search:
+            # For filtered results, use simple offset within filtered data
+            actual_start = max(0, page_start - start_offset)
+            page_records = records[actual_start:actual_start + request.page_size]
+            
+            # Estimate total pages based on filter ratio
+            if len(records) >= chunk_size:
+                # Estimate based on current filter ratio
+                filter_ratio = len(records) / chunk_size
+                estimated_total = int(metadata.total_records * filter_ratio)
+            else:
+                estimated_total = len(records)
+            
+            total_pages = max(1, math.ceil(estimated_total / request.page_size))
+        else:
+            # No filters, use simple pagination
+            page_records = records[:request.page_size]
+            total_pages = max(1, math.ceil(metadata.total_records / request.page_size))
+            total_filtered = metadata.total_records
         
         return DataChunk(
-            data=records,
+            data=page_records,
             page=request.page,
             page_size=request.page_size,
             total_pages=total_pages,
-            total_records=metadata.total_records,
+            total_records=total_filtered,
             has_next=request.page < total_pages,
             has_prev=request.page > 1
         )
