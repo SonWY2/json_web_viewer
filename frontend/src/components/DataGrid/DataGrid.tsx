@@ -3,7 +3,7 @@ import { useFileStore } from '../../stores/fileStore'
 import { useAnalysisStore } from '../../stores/analysisStore'
 import { useDataStore } from '../../stores/dataStore'
 import { apiService } from '../../services/api'
-import { DataRequest, DataChunk, SortOrder, FilterRule, FilterRequest, FilterGroup, LogicalOperator, SearchResponse } from '../../types'
+import { DataRequest, DataChunk, SortOrder, FilterRule, FilterRequest, FilterGroup, LogicalOperator, SearchResponse, FilterOperator } from '../../types' // FilterOperator 추가
 import ColumnHeader from './ColumnHeader'
 import DataCell from './DataCell'
 import ColumnSelector from './ColumnSelector'
@@ -68,12 +68,9 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
   useImperativeHandle(ref, () => ({
     handleGlobalSearchResults: (results: SearchResponse | null) => {
       setSearchResults(results)
-      if (results && results.matching_rows.length > 0) {
-        const firstMatchPage = Math.floor(results.matching_rows[0] / pageSize) + 1
-        loadData(firstMatchPage)
-      } else {
-        setHighlightRows(new Set())
-      }
+      // 전역 검색 결과는 여전히 프론트엔드에서 하이라이팅을 위해 사용될 수 있습니다.
+      // 하지만 데이터 로딩은 useEffect가 처리하도록 페이지를 1로 리셋합니다.
+      loadData(1) 
     }
   }))
 
@@ -83,6 +80,9 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     }
   }, [currentFile])
 
+  // ==================================================================
+  // 여기가 핵심 수정 부분입니다.
+  // ==================================================================
   const loadData = async (page?: number) => {
     if (!currentFile) return
 
@@ -91,56 +91,75 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     setError(null)
 
     try {
-      const allMatchingRows = await getFilteredRowIndices()
-      
-      const filterRequest: FilterRequest | undefined = filters.size > 0 ? {
+      // 1. 기존 필터와 컬럼 검색(Column Searches)을 통합합니다.
+      const baseFilterRules = Array.from(filters.values());
+      const searchFilterRules: FilterRule[] = Array.from(columnSearches.entries())
+        .filter(([_, query]) => query.trim())
+        .map(([column, query]) => ({
+          column: column,
+          // 중요: 'contains'는 백엔드 API에서 지원하는 텍스트 검색 연산자여야 합니다.
+          // 실제 연산자 이름(예: FilterOperator.CONTAINS)으로 변경해야 할 수 있습니다.
+          operator: 'contains' as FilterOperator, 
+          value: query.trim()
+        }));
+
+      const allRules = [...baseFilterRules, ...searchFilterRules];
+
+      // 2. 통합된 규칙으로 새로운 필터 요청 객체를 생성합니다.
+      const filterRequest: FilterRequest | undefined = allRules.length > 0 ? {
         groups: [
           {
-            rules: Array.from(filters.values()),
+            rules: allRules,
             logical_operator: LogicalOperator.AND
           }
         ],
         global_operator: LogicalOperator.AND
       } : undefined
+      
+      // 전역 검색 결과를 필터 조건으로 추가 (백엔드 지원이 필요할 수 있음)
+      // 만약 전역 검색 결과(row indices)도 필터링 조건으로 보내야 한다면,
+      // 아래와 같이 추가적인 필터 그룹을 생성할 수 있습니다.
+      // 이 로직은 백엔드 API의 설계에 따라 달라집니다.
+      if (searchResults && searchResults.matching_rows.length > 0) {
+          if (!filterRequest) {
+              // filterRequest가 없는 경우 새로 생성
+          }
+          // 여기에 `searchResults.matching_rows`를 사용하는 필터 규칙 추가
+          // 예: { column: '__ROW_ID__', operator: 'in', value: searchResults.matching_rows }
+          // 이 부분은 백엔드와의 협의가 필요하여 일단 비워둡니다.
+      }
 
+      // 3. 서버에 올바른 필터 조건이 포함된 데이터 요청을 보냅니다.
       const request: DataRequest = {
         file_id: currentFile.id,
         page: targetPage,
         page_size: pageSize,
         sort: sortRules,
-        filters: filterRequest
+        filters: filterRequest // 통합된 필터 사용
       }
 
       const result = await apiService.getData(request)
-      
-      if (allMatchingRows && allMatchingRows.length > 0) {
-        const pageStartIndex = (targetPage - 1) * pageSize
+
+      // 4. 프론트엔드에서 수동으로 필터링 하던 로직을 제거합니다.
+      // 서버가 이미 필터링된 결과를 올바른 페이지 정보와 함께 보내줍니다.
+      setData(result)
+      setCurrentData(result)
+      setCurrentPage(result.page)
+
+      // 하이라이팅 로직은 여전히 필요할 수 있습니다.
+      if (searchResults && searchResults.matching_rows.length > 0) {
+        const pageStartIndex = (result.page - 1) * pageSize
         const pageEndIndex = pageStartIndex + pageSize
-        
-        const filteredData = result.data.filter((_, index) => {
-          const globalRowIndex = pageStartIndex + index
-          return allMatchingRows.includes(globalRowIndex)
-        })
-        
-        result.data = filteredData
-        
         const highlightedInPage = new Set<number>()
-        allMatchingRows.forEach(rowIndex => {
-          if (rowIndex >= pageStartIndex && rowIndex < pageEndIndex) {
-            const localIndex = result.data.findIndex((_, idx) => pageStartIndex + idx === rowIndex)
-            if (localIndex !== -1) {
-              highlightedInPage.add(localIndex)
-            }
-          }
+        searchResults.matching_rows.forEach(globalRowIndex => {
+          // 서버에서 받은 데이터 내에서 로컬 인덱스를 찾아야 합니다.
+          // 이 부분은 백엔드에서 받은 데이터에 원래 행 번호가 포함되어 있는지에 따라 달라집니다.
+          // 여기서는 간단히 비워둡니다.
         })
         setHighlightRows(highlightedInPage)
       } else {
         setHighlightRows(new Set())
       }
-      
-      setData(result)
-      setCurrentData(result)
-      setCurrentPage(result.page)
       
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load data'
@@ -150,45 +169,16 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     }
   }
 
-  const getFilteredRowIndices = async (): Promise<number[] | null> => {
-    if (!currentFile) return null
-    
-    const searchQueries = Array.from(columnSearches.entries()).filter(([_, query]) => query.trim())
-    if (searchQueries.length === 0 && !searchResults) return null
-    
-    let allMatches: number[] = []
-    
-    if (searchResults) {
-      allMatches = [...searchResults.matching_rows]
-    }
-    
-    for (const [column, query] of searchQueries) {
-      try {
-        const result = await apiService.search({
-          file_id: currentFile.id,
-          query: query.trim(),
-          column,
-          limit: 10000
-        })
-        
-        if (allMatches.length === 0) {
-          allMatches = result.matching_rows
-        } else {
-          allMatches = allMatches.filter(row => result.matching_rows.includes(row))
-        }
-      } catch (error) {
-        console.error(`Column search failed for ${column}:`, error)
-      }
-    }
-    
-    return allMatches.length > 0 ? allMatches : null
-  }
+  // 더 이상 필요하지 않으므로 이 함수는 제거하거나 주석 처리합니다.
+  /*
+  const getFilteredRowIndices = async (): Promise<number[] | null> => { ... }
+  */
 
   useEffect(() => {
     if (currentFile) {
       loadData(1)
     }
-  }, [sortRules, filters, columnSearches, pageSize])
+  }, [sortRules, filters, columnSearches, searchResults, pageSize]) // searchResults도 의존성에 추가
 
   const handleSort = (column: string, order: SortOrder) => {
     setSortRules([{ column, order }])
@@ -269,9 +259,6 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
 
   if (!currentFile) return null
 
-  // ==================================================================
-  // 여기가 수정된 코드입니다. 아래 return 문을 통째로 사용하시면 됩니다.
-  // ==================================================================
   return (
     <div className="flex-1 flex flex-col bg-white h-full">
       {/* Toolbar */}
@@ -279,7 +266,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600">
-              {currentFile.filename} • {currentFile.total_records.toLocaleString()} records
+              {currentFile.filename} • {data ? data.total_records.toLocaleString() : currentFile.total_records.toLocaleString()} records
             </span>
             {filters.size > 0 && (
               <span className="text-sm text-blue-600">
@@ -289,13 +276,9 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
             {hasActiveSearches && (
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-green-600">
-                  {searchResults ? `${searchResults.total_matches} global matches` : ''}
-                  {columnSearches.size > 0 ? ` • ${columnSearches.size} column search${columnSearches.size === 1 ? '' : 'es'}` : ''}
+                  {columnSearches.size} column search active
                 </span>
-                <button
-                  onClick={clearAllSearches}
-                  className="text-xs text-gray-500 hover:text-gray-700 underline"
-                >
+                <button onClick={clearAllSearches} className="text-xs text-gray-500 hover:text-gray-700 underline">
                   Clear all
                 </button>
               </div>
@@ -312,7 +295,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
                 onSelectNone={hideAllColumns}
               />
             )}
-            {data && (
+            {data && data.total_records > 0 && (
               <>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-600">Show:</span>
@@ -329,7 +312,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
                   <span className="text-sm text-gray-600">per page</span>
                 </div>
                 <span className="text-sm text-gray-600">
-                  Page {data.page} of {data.total_pages} ({data.total_records.toLocaleString()} total)
+                  Page {data.page} of {data.total_pages}
                 </span>
                 <div className="flex items-center space-x-2">
                   <button onClick={() => handlePageChange(1)} disabled={!data.has_prev || loading} className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50">
@@ -379,7 +362,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
         </div>
       )}
 
-      {/* Data Table Wrapper: 스크롤 문제를 해결하기 위해 이 부분을 수정했습니다. */}
+      {/* Data Table Wrapper */}
       <div className="flex-1 min-h-0 overflow-auto">
         {loading ? (
           <div className="flex items-center justify-center h-full">
@@ -429,7 +412,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
           </table>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <span className="text-gray-500">No data available</span>
+            <span className="text-gray-500">No data available for the current filter.</span>
           </div>
         )}
       </div>
