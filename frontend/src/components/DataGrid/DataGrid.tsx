@@ -291,9 +291,9 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
   if (!currentFile) return null
 
   return (
-    <div className="flex-1 flex flex-col bg-white">
+    <div className="flex-1 flex flex-col bg-white h-full">
       {/* Toolbar */}
-      <div className="border-b border-gray-200 px-6 py-3">
+      <div className="border-b border-gray-200 px-6 py-3 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600">
@@ -418,7 +418,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-50 border-l-4 border-red-400 p-4 m-4">
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 m-4 flex-shrink-0">
           <div className="flex">
             <AlertCircle className="w-5 h-5 text-red-400" />
             <div className="ml-3">
@@ -429,16 +429,16 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
       )}
 
       {/* Data Table */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-32">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             <span className="ml-2 text-gray-600">Loading data...</span>
           </div>
         ) : data ? (
-          <div className="h-full overflow-auto">
-            <table className="w-full">
-              <thead className="sticky top-0 bg-gray-50 z-10">
+          <div className="h-full overflow-y-auto overflow-x-auto">
+            <table className="w-full table-fixed">
+              <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
                 <tr>
                   {getVisibleColumnsInOrder().map((column) => (
                     <ColumnHeader
