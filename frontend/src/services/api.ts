@@ -1,4 +1,4 @@
-import { FileMetadata, DataRequest, DataChunk, SearchRequest, SearchResponse, TaskInfo } from '../types'
+import { FileMetadata, DataRequest, DataChunk, SearchRequest, SearchResponse, TaskInfo, DirectoryListing } from '../types'
 
 const API_BASE = '/api/v1'
 
@@ -20,6 +20,21 @@ class ApiService {
     return response.json()
   }
 
+  async loadFromPath(filePath: string): Promise<FileMetadata> {
+    const formData = new FormData()
+    const response = await fetch(`${API_BASE}/files/load-path`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: filePath })
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to load file: ${response.statusText}`)
+    }
+    
+    return response.json()
+  }
+
   async getFileInfo(fileId: string): Promise<FileMetadata> {
     const response = await fetch(`${API_BASE}/files/${fileId}`)
     if (!response.ok) {
@@ -34,6 +49,27 @@ class ApiService {
       throw new Error(`Failed to list files: ${response.statusText}`)
     }
     return response.json()
+  }
+
+  // Filesystem operations
+  async listDirectory(path?: string): Promise<DirectoryListing> {
+    const url = path ? `${API_BASE}/filesystem/?path=${encodeURIComponent(path)}` : `${API_BASE}/filesystem/`
+    const response = await fetch(url)
+    
+    if (!response.ok) {
+      throw new Error(`Failed to list directory: ${response.statusText}`)
+    }
+    
+    return response.json()
+  }
+
+  async getDefaultPath(): Promise<string> {
+    const response = await fetch(`${API_BASE}/filesystem/default-path`)
+    if (!response.ok) {
+      throw new Error(`Failed to get default path: ${response.statusText}`)
+    }
+    const data = await response.json()
+    return data.path
   }
 
   // Data operations

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { BarChart3, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { apiService } from '../../services/api'
-import { TaskInfo, TaskStatus, ColumnAnalysis } from '../../types'
+import { useAnalysisStore } from '../../stores/analysisStore'
+import { TaskInfo, TaskStatus } from '../../types'
 
 interface AnalysisProgressProps {
   taskId: string
@@ -12,6 +13,7 @@ interface AnalysisProgressProps {
 const AnalysisProgress: React.FC<AnalysisProgressProps> = ({ taskId, onComplete, onError }) => {
   const [task, setTask] = useState<TaskInfo | null>(null)
   const [polling, setPolling] = useState(true)
+  const { setColumnAnalysis, removeActiveTask, setSelectedColumn } = useAnalysisStore()
 
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -23,16 +25,39 @@ const AnalysisProgress: React.FC<AnalysisProgressProps> = ({ taskId, onComplete,
 
         if (taskInfo.status === TaskStatus.COMPLETED) {
           setPolling(false)
+          
+          console.log('Analysis completed for task:', taskInfo.name)
+          console.log('Analysis result:', taskInfo.result)
+          
+          // Extract column name from task name
+          if (taskInfo.name.startsWith('Analyze ') && taskInfo.result) {
+            const columnName = taskInfo.name.replace('Analyze ', '')
+            console.log('Setting analysis for column:', columnName)
+            
+            // Store analysis result
+            setColumnAnalysis(columnName, taskInfo.result)
+            
+            // Set as selected column to show in sidebar
+            setSelectedColumn(columnName)
+            
+            console.log('Analysis stored and column selected:', columnName)
+          }
+          
+          // Remove from active tasks
+          removeActiveTask(taskId)
           onComplete?.(taskInfo.result)
         } else if (taskInfo.status === TaskStatus.FAILED) {
           setPolling(false)
+          removeActiveTask(taskId)
           onError?.(taskInfo.error || 'Analysis failed')
         } else if (taskInfo.status === TaskStatus.CANCELLED) {
           setPolling(false)
+          removeActiveTask(taskId)
         }
       } catch (error) {
         console.error('Failed to get task status:', error)
         setPolling(false)
+        removeActiveTask(taskId)
         onError?.('Failed to get analysis status')
       }
     }
@@ -45,7 +70,7 @@ const AnalysisProgress: React.FC<AnalysisProgressProps> = ({ taskId, onComplete,
     return () => {
       if (interval) clearInterval(interval)
     }
-  }, [taskId, polling, onComplete, onError])
+  }, [taskId, polling, onComplete, onError, setColumnAnalysis, removeActiveTask, setSelectedColumn])
 
   if (!task) {
     return (
@@ -80,7 +105,7 @@ const AnalysisProgress: React.FC<AnalysisProgressProps> = ({ taskId, onComplete,
       case TaskStatus.RUNNING:
         return `Analyzing... ${task.progress.toFixed(1)}%`
       case TaskStatus.COMPLETED:
-        return 'Analysis completed!'
+        return '✅ Analysis completed! Results shown below.'
       case TaskStatus.FAILED:
         return `Failed: ${task.error}`
       case TaskStatus.CANCELLED:

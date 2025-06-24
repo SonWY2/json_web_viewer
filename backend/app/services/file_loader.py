@@ -20,13 +20,20 @@ class FileLoaderService:
         self.schema_detector = SchemaDetector()
         self.loaded_files: Dict[str, FileMetadata] = {}
     
-    async def upload_file(self, file_data: bytes, filename: str) -> FileMetadata:
+    async def upload_file(self, file_data: bytes, filename: str, temporary: bool = False) -> FileMetadata:
         """Upload and process JSONL file"""
-        # Generate unique file ID
         file_id = str(uuid.uuid4())
         
+        if temporary:
+            # Use temporary file that will be auto-cleaned
+            temp_dir = Path(settings.upload_dir) / "temp"
+            temp_dir.mkdir(exist_ok=True)
+            file_path = temp_dir / f"temp_{file_id}_{filename}"
+        else:
+            # Regular upload
+            file_path = self.upload_dir / f"{file_id}_{filename}"
+        
         # Save file
-        file_path = self.upload_dir / f"{file_id}_{filename}"
         with open(file_path, 'wb') as f:
             f.write(file_data)
         
@@ -39,6 +46,28 @@ class FileLoaderService:
             self._analyze_file_full,
             f"Full analysis of {filename}",
             file_id, file_path
+        )
+        
+        return metadata
+    
+    async def load_from_path(self, file_path: str) -> FileMetadata:
+        """Load JSONL file directly from filesystem path (no copy)"""
+        file_id = str(uuid.uuid4())
+        path_obj = Path(file_path)
+        
+        # Quick analysis for immediate response
+        metadata = await self._analyze_file_quick(file_id, path_obj.name, path_obj)
+        # Override file_path to point to original file
+        metadata.file_path = file_path
+        metadata.original_filename = path_obj.name
+        
+        self.loaded_files[file_id] = metadata
+        
+        # Start background full analysis
+        task_manager.submit_task(
+            self._analyze_file_full,
+            f"Full analysis of {path_obj.name}",
+            file_id, path_obj
         )
         
         return metadata

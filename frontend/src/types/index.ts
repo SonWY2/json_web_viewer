@@ -170,6 +170,21 @@ export interface ColumnAnalysis {
   }
 }
 
+// File System Types
+export interface FileSystemItem {
+  name: string
+  path: string
+  is_directory: boolean
+  size: number
+  extension: string
+}
+
+export interface DirectoryListing {
+  current_path: string
+  parent_path?: string
+  items: FileSystemItem[]
+}
+
 // UI Types
 export type ViewMode = 'table' | 'card' | 'json'
 

@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Optional
+from typing import List, Dict, Any, Optional
 import math
 from ..models.file_info import DataChunk
 from ..models.filter import DataRequest, FilterRequest, SortRule, SortOrder
@@ -176,36 +176,121 @@ class DataService:
         return filtered_records
     
     def _apply_sorting(self, records: List[Dict[str, Any]], sort_rules: List[SortRule]) -> List[Dict[str, Any]]:
-        """Apply sorting to records"""
+        """Apply sorting to records by each SortRule sequentially"""
         if not sort_rules:
             return records
         
-        def sort_key(record):
-            keys = []
-            for rule in sort_rules:
+        # Sort by rules in reverse order to maintain priority
+        # (stable sorting means last sort has highest priority)
+        result = records[:]
+        
+        for rule in reversed(sort_rules):
+            def sort_key(record):
                 value = record.get(rule.column)
                 
-                # Handle None values
+                # Handle None values - always sort them first
                 if value is None:
-                    keys.append((0, ""))  # Sort nulls first
-                else:
-                    # Try to sort as number, fallback to string
-                    try:
-                        if isinstance(value, (int, float)):
-                            keys.append((1, value))
-                        else:
-                            numeric_value = float(str(value))
-                            keys.append((1, numeric_value))
-                    except (ValueError, TypeError):
-                        keys.append((1, str(value).lower()))
+                    return (0, "")
+                
+                # Try to sort as number first
+                try:
+                    if isinstance(value, (int, float)):
+                        return (1, value)
+                    else:
+                        return (1, float(str(value)))
+                except (ValueError, TypeError):
+                    # Fallback to string sorting
+                    return (1, str(value).lower())
             
-            return keys
+            result = sorted(result, key=sort_key, reverse=(rule.order == SortOrder.DESC))
         
-        # Sort with reverse for descending order
-        reverse_flags = [rule.order == SortOrder.DESC for rule in sort_rules]
-        
-        # For multiple sort columns, we need to sort by all at once
-        return sorted(records, key=sort_key, reverse=reverse_flags[0] if reverse_flags else False)
+        return result
 
 # Global service instance
 data_service = DataService()
+
+
+def test_multiple_column_sorting():
+    """Test sorting by multiple columns with mixed ASC/DESC orders"""
+    from ..models.filter import SortRule, SortOrder
+    
+    # Test data
+    test_records = [
+        {"name": "Alice", "age": 30, "city": "Boston"},
+        {"name": "Bob", "age": 25, "city": "Boston"},
+        {"name": "Charlie", "age": 30, "city": "Austin"},
+        {"name": "David", "age": 25, "city": "Austin"},
+        {"name": "Eve", "age": 35, "city": "Boston"},
+    ]
+    
+    service = DataService()
+    
+    # Test 1: Sort by city ASC, then age DESC
+    sort_rules = [
+        SortRule(column="city", order=SortOrder.ASC),
+        SortRule(column="age", order=SortOrder.DESC)
+    ]
+    
+    result1 = service._apply_sorting(test_records, sort_rules)
+    expected1 = [
+        {"name": "David", "age": 25, "city": "Austin"},
+        {"name": "Charlie", "age": 30, "city": "Austin"},
+        {"name": "Eve", "age": 35, "city": "Boston"},
+        {"name": "Alice", "age": 30, "city": "Boston"},
+        {"name": "Bob", "age": 25, "city": "Boston"},
+    ]
+    
+    print("Test 1 - City ASC, Age DESC:")
+    for i, record in enumerate(result1):
+        print(f"  {record}")
+        assert record == expected1[i], f"Mismatch at index {i}"
+    
+    # Test 2: Sort by age ASC, then name DESC
+    sort_rules = [
+        SortRule(column="age", order=SortOrder.ASC),
+        SortRule(column="name", order=SortOrder.DESC)
+    ]
+    
+    result2 = service._apply_sorting(test_records, sort_rules)
+    expected2 = [
+        {"name": "David", "age": 25, "city": "Austin"},
+        {"name": "Bob", "age": 25, "city": "Boston"},
+        {"name": "Charlie", "age": 30, "city": "Austin"},
+        {"name": "Alice", "age": 30, "city": "Boston"},
+        {"name": "Eve", "age": 35, "city": "Boston"},
+    ]
+    
+    print("\nTest 2 - Age ASC, Name DESC:")
+    for i, record in enumerate(result2):
+        print(f"  {record}")
+        assert record == expected2[i], f"Mismatch at index {i}"
+    
+    # Test 3: Single column DESC
+    sort_rules = [SortRule(column="age", order=SortOrder.DESC)]
+    
+    result3 = service._apply_sorting(test_records, sort_rules)
+    ages = [record["age"] for record in result3]
+    assert ages == [35, 30, 30, 25, 25], f"Single column DESC failed: {ages}"
+    
+    print("\nTest 3 - Single column DESC: PASSED")
+    
+    # Test 4: Handle None values
+    test_with_none = [
+        {"name": "Alice", "age": None},
+        {"name": "Bob", "age": 25},
+        {"name": "Charlie", "age": 30},
+    ]
+    
+    sort_rules = [SortRule(column="age", order=SortOrder.ASC)]
+    result4 = service._apply_sorting(test_with_none, sort_rules)
+    
+    # None should come first
+    assert result4[0]["age"] is None, "None values should sort first"
+    assert result4[1]["age"] == 25, "25 should come after None"
+    assert result4[2]["age"] == 30, "30 should come last"
+    
+    print("Test 4 - None values: PASSED")
+    print("\nAll sorting tests passed! ✅")
+
+if __name__ == "__main__":
+    test_multiple_column_sorting()

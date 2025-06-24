@@ -42,24 +42,33 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   selectedColumn: null,
   showAnalysisPanel: false,
   
-  setColumnAnalysis: (column, analysis) => set((state) => {
-    const newAnalyses = new Map(state.columnAnalyses)
-    newAnalyses.set(column, analysis)
+  setColumnAnalysis: (column, analysis) => {
+    console.log(`[AnalysisStore] Setting analysis for column: ${column}`)
+    console.log(`[AnalysisStore] Analysis data:`, analysis)
     
-    // Clear loading and error state
-    const newLoading = new Map(state.analysisLoading)
-    const newErrors = new Map(state.analysisErrors)
-    newLoading.delete(column)
-    newErrors.delete(column)
-    
-    return { 
-      columnAnalyses: newAnalyses,
-      analysisLoading: newLoading,
-      analysisErrors: newErrors
-    }
-  }),
+    set((state) => {
+      const newAnalyses = new Map(state.columnAnalyses)
+      newAnalyses.set(column, analysis)
+      
+      // Clear loading and error state
+      const newLoading = new Map(state.analysisLoading)
+      const newErrors = new Map(state.analysisErrors)
+      newLoading.delete(column)
+      newErrors.delete(column)
+      
+      console.log(`[AnalysisStore] Total analyses stored: ${newAnalyses.size}`)
+      
+      return { 
+        columnAnalyses: newAnalyses,
+        analysisLoading: newLoading,
+        analysisErrors: newErrors
+      }
+    })
+  },
   
   setAnalysisLoading: (column, loading) => set((state) => {
+    console.log(`[AnalysisStore] Setting loading for column ${column}: ${loading}`)
+    
     const newLoading = new Map(state.analysisLoading)
     if (loading) {
       newLoading.set(column, true)
@@ -70,6 +79,8 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   }),
   
   setAnalysisError: (column, error) => set((state) => {
+    console.log(`[AnalysisStore] Setting error for column ${column}: ${error}`)
+    
     const newErrors = new Map(state.analysisErrors)
     if (error) {
       newErrors.set(column, error)
@@ -88,6 +99,8 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   }),
   
   clearColumnAnalysis: (column) => set((state) => {
+    console.log(`[AnalysisStore] Clearing analysis for column: ${column}`)
+    
     const newAnalyses = new Map(state.columnAnalyses)
     const newLoading = new Map(state.analysisLoading)
     const newErrors = new Map(state.analysisErrors)
@@ -103,11 +116,16 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
     }
   }),
   
-  addActiveTask: (taskId, task) => set((state) => {
-    const newTasks = new Map(state.activeTasks)
-    newTasks.set(taskId, task)
-    return { activeTasks: newTasks }
-  }),
+  addActiveTask: (taskId, task) => {
+    console.log(`[AnalysisStore] Adding active task: ${taskId} - ${task.name}`)
+    
+    set((state) => {
+      const newTasks = new Map(state.activeTasks)
+      newTasks.set(taskId, task)
+      console.log(`[AnalysisStore] Total active tasks: ${newTasks.size}`)
+      return { activeTasks: newTasks }
+    })
+  },
   
   updateActiveTask: (taskId, task) => set((state) => {
     const newTasks = new Map(state.activeTasks)
@@ -115,17 +133,31 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
     return { activeTasks: newTasks }
   }),
   
-  removeActiveTask: (taskId) => set((state) => {
-    const newTasks = new Map(state.activeTasks)
-    newTasks.delete(taskId)
-    return { activeTasks: newTasks }
-  }),
+  removeActiveTask: (taskId) => {
+    console.log(`[AnalysisStore] Removing active task: ${taskId}`)
+    
+    set((state) => {
+      const newTasks = new Map(state.activeTasks)
+      newTasks.delete(taskId)
+      console.log(`[AnalysisStore] Remaining active tasks: ${newTasks.size}`)
+      return { activeTasks: newTasks }
+    })
+  },
   
-  setSelectedColumn: (column) => set({ selectedColumn: column }),
+  setSelectedColumn: (column) => {
+    console.log(`[AnalysisStore] Setting selected column: ${column}`)
+    set({ selectedColumn: column })
+  },
+  
   setShowAnalysisPanel: (show) => set({ showAnalysisPanel: show }),
   
   // Computed
-  getColumnAnalysis: (column) => get().columnAnalyses.get(column) || null,
+  getColumnAnalysis: (column) => {
+    const analysis = get().columnAnalyses.get(column) || null
+    console.log(`[AnalysisStore] Getting analysis for ${column}:`, analysis ? 'found' : 'not found')
+    return analysis
+  },
+  
   isColumnLoading: (column) => get().analysisLoading.get(column) || false,
   getColumnError: (column) => get().analysisErrors.get(column) || null,
   getActiveTasksArray: () => Array.from(get().activeTasks.values())
