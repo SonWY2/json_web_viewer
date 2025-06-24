@@ -30,11 +30,12 @@ def get_default_path() -> str:
             
         if system == "linux":
             paths = [
-                os.path.expanduser("~/Documents"),
-                os.path.expanduser("~"),
-                "/home/jovyan/work",
-                "/home/jovyan", 
-                "/tmp"
+                "/home/jovyan/src",
+                # os.path.expanduser("~/Documents"),
+                # os.path.expanduser("~"),
+                # "/home/jovyan/work",
+                # "/home/jovyan", 
+                # "/tmp"
             ]
             for path in paths:
                 if os.path.exists(path) and os.access(path, os.R_OK):

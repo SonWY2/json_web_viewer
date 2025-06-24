@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Folder, File, ChevronRight, Home, ArrowUp, AlertCircle } from 'lucide-react'
+import { Folder, File, ChevronRight, Home, ArrowUp, AlertCircle, Clipboard } from 'lucide-react'
 import { apiService } from '../../services/api'
 import { useFileStore } from '../../stores/fileStore'
 import { DirectoryListing, FileSystemItem } from '../../types'
@@ -8,6 +8,8 @@ const FileExplorer: React.FC = () => {
   const [currentListing, setCurrentListing] = useState<DirectoryListing | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pathInput, setPathInput] = useState('')
+  const [pathLoading, setPathLoading] = useState(false)
   const { setCurrentFile, setLoading: setFileLoading } = useFileStore()
 
   useEffect(() => {
@@ -59,6 +61,47 @@ const FileExplorer: React.FC = () => {
     }
   }
 
+  const handlePathInput = async () => {
+    if (!pathInput.trim()) return
+    
+    setPathLoading(true)
+    setError(null)
+    
+    try {
+      const path = pathInput.trim()
+      
+      // Check if it's a file (has .jsonl or .json extension)
+      if (path.match(/\.(jsonl|json)$/i)) {
+        // Load file directly
+        setFileLoading(true)
+        const fileData = await apiService.loadFromPath(path)
+        setCurrentFile(fileData)
+        setPathInput('')
+        setFileLoading(false)
+      } else {
+        // Try to navigate to directory
+        const listing = await apiService.listDirectory(path)
+        setCurrentListing(listing)
+        setPathInput('')
+      }
+    } catch (err: any) {
+      console.error('Failed to handle path:', err)
+      setError(err.message || 'Invalid path or access denied')
+      setFileLoading(false)
+    } finally {
+      setPathLoading(false)
+    }
+  }
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      setPathInput(text)
+    } catch (err) {
+      console.error('Failed to read clipboard:', err)
+    }
+  }
+
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 B'
     const k = 1024
@@ -80,6 +123,40 @@ const FileExplorer: React.FC = () => {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="p-3 border-b border-gray-200 bg-gray-50">
+        {/* Path Input */}
+        <div className="mb-3">
+          <div className="flex items-center space-x-1">
+            <input
+              type="text"
+              value={pathInput}
+              onChange={(e) => setPathInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handlePathInput()}
+              placeholder="Paste file/directory path..."
+              className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={pathLoading}
+            />
+            <button
+              onClick={handlePaste}
+              className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+              title="Paste from clipboard"
+              disabled={pathLoading}
+            >
+              <Clipboard className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handlePathInput}
+              disabled={!pathInput.trim() || pathLoading}
+              className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {pathLoading ? '...' : 'Go'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Enter file path (.jsonl) to load directly, or directory path to browse
+          </p>
+        </div>
+        
+        {/* Navigation Buttons */}
         <div className="flex items-center space-x-2">
           <button
             onClick={loadDefaultDirectory}

@@ -14,6 +14,7 @@ interface DataStore {
   // Column visibility
   visibleColumns: string[]
   columnOrder: string[]
+  columnWidths: Record<string, number>  // Added: track column widths
   
   // Actions
   setCurrentData: (data: DataChunk | null) => void
@@ -29,6 +30,7 @@ interface DataStore {
   // Column actions
   setVisibleColumns: (columnIds: string[]) => void
   setColumnOrder: (columnIds: string[]) => void
+  setColumnWidth: (columnId: string, width: number) => void  // Added
   toggleColumnVisibility: (columnId: string) => void
   showAllColumns: () => void
   hideAllColumns: () => void
@@ -50,6 +52,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
   searchResults: null,
   visibleColumns: [],
   columnOrder: [],
+  columnWidths: {},  // Added
   
   setCurrentData: (data) => {
     set((state) => {
@@ -95,6 +98,10 @@ export const useDataStore = create<DataStore>((set, get) => ({
   
   setColumnOrder: (columnIds) => set({ columnOrder: columnIds }),
   
+  setColumnWidth: (columnId, width) => set((state) => ({
+    columnWidths: { ...state.columnWidths, [columnId]: Math.max(100, Math.min(500, width)) }
+  })),
+  
   toggleColumnVisibility: (columnId) => set((state) => {
     const isVisible = state.visibleColumns.includes(columnId)
     if (isVisible) {
@@ -111,9 +118,13 @@ export const useDataStore = create<DataStore>((set, get) => ({
   showAllColumns: () => set((state) => {
     if (state.currentData?.schema) {
       const allColumnIds = state.currentData.schema.map(col => col.name)
+      const defaultWidths = Object.fromEntries(
+        allColumnIds.map(id => [id, state.columnWidths[id] || 200])
+      )
       return { 
         visibleColumns: [...allColumnIds],
-        columnOrder: state.columnOrder.length === 0 ? [...allColumnIds] : state.columnOrder
+        columnOrder: state.columnOrder.length === 0 ? [...allColumnIds] : state.columnOrder,
+        columnWidths: { ...state.columnWidths, ...defaultWidths }
       }
     }
     return {}

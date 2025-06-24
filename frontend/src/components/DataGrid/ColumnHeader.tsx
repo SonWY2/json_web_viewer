@@ -1,4 +1,25 @@
-import React, { useState } from 'react'
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+    setStartX(e.clientX)
+    setStartWidth(width)
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return
+      const diff = e.clientX - startX
+      const newWidth = Math.max(100, Math.min(500, startWidth + diff))
+      onResize?.(column, newWidth)
+    }
+    
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }import React, { useState } from 'react'
 import { ChevronUp, ChevronDown, BarChart3, Filter, Search } from 'lucide-react'
 import { SortOrder, FilterRule } from '../../types'
 import FilterDropdown from '../Filters/FilterDropdown'
@@ -9,8 +30,10 @@ interface ColumnHeaderProps {
   sampleValues: string[]
   sortOrder?: SortOrder
   hasFilter: boolean
+  width?: number
   onSort: (column: string, order: SortOrder) => void
   onFilter: (column: string, rule: FilterRule | null) => void
+  onResize?: (column: string, width: number) => void
   onAnalyze?: (column: string) => void
   onColumnSearch?: (column: string, query: string) => void
 }
@@ -21,13 +44,18 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   sampleValues,
   sortOrder,
   hasFilter,
+  width = 200,
   onSort,
   onFilter,
+  onResize,
   onAnalyze,
   onColumnSearch
 }) => {
   const [showColumnSearch, setShowColumnSearch] = useState(false)
   const [columnSearchQuery, setColumnSearchQuery] = useState('')
+  const [isResizing, setIsResizing] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [startWidth, setStartWidth] = useState(0)
 
   const handleSort = () => {
     const newOrder = sortOrder === SortOrder.ASC ? SortOrder.DESC : SortOrder.ASC
@@ -59,7 +87,7 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   }
 
   return (
-    <th className="bg-gray-50 border-b border-gray-200 relative">
+    <th className="bg-gray-50 border-b border-gray-200 relative group" style={{ width }}>
       <div className="p-3 space-y-2">
         {/* Column Name and Sort */}
         <div className="flex items-center justify-between">
@@ -144,6 +172,17 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
           )}
         </div>
       </div>
+      
+      {/* Resize Handle */}
+      {onResize && (
+        <div
+          className={`absolute right-0 top-0 w-1 h-full cursor-col-resize bg-transparent hover:bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity ${
+            isResizing ? 'bg-blue-500 opacity-100' : ''
+          }`}
+          onMouseDown={handleResizeStart}
+          title="Drag to resize column"
+        />
+      )}
     </th>
   )
 }
