@@ -16,47 +16,41 @@ interface DataGridRef {
 const DataGrid = forwardRef<DataGridRef>((props, ref) => {
   const { currentFile } = useFileStore()
   const { addActiveTask, setAnalysisLoading, setAnalysisError, setSelectedColumn } = useAnalysisStore()
-  const { 
-    visibleColumns, 
-    columnOrder, 
-    setVisibleColumns, 
-    setColumnOrder, 
-    toggleColumnVisibility, 
-    showAllColumns, 
+  const {
+    visibleColumns,
+    columnOrder,
+    setVisibleColumns,
+    setColumnOrder,
+    toggleColumnVisibility,
+    showAllColumns,
     hideAllColumns,
     getOrderedVisibleColumns,
     setCurrentData
   } = useDataStore()
-  
+
   const [data, setData] = useState<DataChunk | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(50)  // Made configurable
-  const [jumpToPage, setJumpToPage] = useState('')  // For page jump input
+  const [pageSize, setPageSize] = useState(50)
+  const [jumpToPage, setJumpToPage] = useState('')
   const [sortRules, setSortRules] = useState<Array<{column: string, order: SortOrder}>>([])
   const [filters, setFilters] = useState<Map<string, FilterRule>>(new Map())
   const [searchResults, setSearchResults] = useState<SearchResponse | null>(null)
   const [highlightRows, setHighlightRows] = useState<Set<number>>(new Set())
   const [columnSearches, setColumnSearches] = useState<Map<string, string>>(new Map())
 
-  // Get visible columns in correct order
   const getVisibleColumnsInOrder = () => {
     if (!currentFile) return []
-    
-    // If no columns are visible, show all by default
     if (visibleColumns.length === 0) {
       return currentFile.columns
     }
-    
     const orderedVisible = getOrderedVisibleColumns()
     return currentFile.columns.filter(col => orderedVisible.includes(col.name))
   }
 
-  // Initialize dataStore when currentFile changes
   useEffect(() => {
     if (currentFile) {
-      // Create a mock DataChunk to initialize column state
       const mockDataChunk = {
         data: [],
         page: 1,
@@ -71,11 +65,9 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     }
   }, [currentFile, setCurrentData])
 
-  // Expose methods to parent component
   useImperativeHandle(ref, () => ({
     handleGlobalSearchResults: (results: SearchResponse | null) => {
       setSearchResults(results)
-      
       if (results && results.matching_rows.length > 0) {
         const firstMatchPage = Math.floor(results.matching_rows[0] / pageSize) + 1
         loadData(firstMatchPage)
@@ -99,7 +91,6 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     setError(null)
 
     try {
-      // Combine regular filters with search-based filtering
       const allMatchingRows = await getFilteredRowIndices()
       
       const filterRequest: FilterRequest | undefined = filters.size > 0 ? {
@@ -122,12 +113,10 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
 
       const result = await apiService.getData(request)
       
-      // If we have search results, filter the returned data
       if (allMatchingRows && allMatchingRows.length > 0) {
         const pageStartIndex = (targetPage - 1) * pageSize
         const pageEndIndex = pageStartIndex + pageSize
         
-        // Filter data based on search results
         const filteredData = result.data.filter((_, index) => {
           const globalRowIndex = pageStartIndex + index
           return allMatchingRows.includes(globalRowIndex)
@@ -135,7 +124,6 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
         
         result.data = filteredData
         
-        // Update highlight rows
         const highlightedInPage = new Set<number>()
         allMatchingRows.forEach(rowIndex => {
           if (rowIndex >= pageStartIndex && rowIndex < pageEndIndex) {
@@ -151,7 +139,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
       }
       
       setData(result)
-      setCurrentData(result)  // Update dataStore with actual data
+      setCurrentData(result)
       setCurrentPage(result.page)
       
     } catch (err) {
@@ -170,12 +158,10 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     
     let allMatches: number[] = []
     
-    // Add global search results
     if (searchResults) {
       allMatches = [...searchResults.matching_rows]
     }
     
-    // Add column search results
     for (const [column, query] of searchQueries) {
       try {
         const result = await apiService.search({
@@ -188,7 +174,6 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
         if (allMatches.length === 0) {
           allMatches = result.matching_rows
         } else {
-          // Intersect with existing matches
           allMatches = allMatches.filter(row => result.matching_rows.includes(row))
         }
       } catch (error) {
@@ -199,12 +184,11 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     return allMatches.length > 0 ? allMatches : null
   }
 
-  // Auto-reload when dependencies change
   useEffect(() => {
     if (currentFile) {
       loadData(1)
     }
-  }, [sortRules, filters, columnSearches, pageSize])  // Added pageSize dependency
+  }, [sortRules, filters, columnSearches, pageSize])
 
   const handleSort = (column: string, order: SortOrder) => {
     setSortRules([{ column, order }])
@@ -212,13 +196,11 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
 
   const handleFilter = (column: string, rule: FilterRule | null) => {
     const newFilters = new Map(filters)
-    
     if (rule) {
       newFilters.set(column, rule)
     } else {
       newFilters.delete(column)
     }
-    
     setFilters(newFilters)
   }
 
@@ -250,13 +232,11 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
 
   const handleColumnSearch = (column: string, query: string) => {
     const newSearches = new Map(columnSearches)
-    
     if (query.trim()) {
       newSearches.set(column, query.trim())
     } else {
       newSearches.delete(column)
     }
-    
     setColumnSearches(newSearches)
   }
 
@@ -268,8 +248,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize)
-    setCurrentPage(1)  // Reset to first page
-    // loadData will be triggered by useEffect
+    setCurrentPage(1)
   }
 
   const handleJumpToPage = () => {
@@ -290,6 +269,9 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
 
   if (!currentFile) return null
 
+  // ==================================================================
+  // 여기가 수정된 코드입니다. 아래 return 문을 통째로 사용하시면 됩니다.
+  // ==================================================================
   return (
     <div className="flex-1 flex flex-col bg-white h-full">
       {/* Toolbar */}
@@ -319,9 +301,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
               </div>
             )}
           </div>
-          
           <div className="flex items-center space-x-4">
-            {/* Column Selector */}
             {currentFile && (
               <ColumnSelector
                 columns={currentFile.columns}
@@ -332,10 +312,8 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
                 onSelectNone={hideAllColumns}
               />
             )}
-            
             {data && (
               <>
-                {/* Page Size Selector */}
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-600">Show:</span>
                   <select
@@ -350,30 +328,16 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
                   </select>
                   <span className="text-sm text-gray-600">per page</span>
                 </div>
-                
-                {/* Page Info */}
                 <span className="text-sm text-gray-600">
                   Page {data.page} of {data.total_pages} ({data.total_records.toLocaleString()} total)
                 </span>
-                
-                {/* Page Navigation */}
                 <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => handlePageChange(1)}
-                    disabled={!data.has_prev || loading}
-                    className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
-                  >
+                  <button onClick={() => handlePageChange(1)} disabled={!data.has_prev || loading} className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50">
                     « First
                   </button>
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={!data.has_prev || loading}
-                    className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
-                  >
+                  <button onClick={() => handlePageChange(currentPage - 1)} disabled={!data.has_prev || loading} className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50">
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  
-                  {/* Page Jump */}
                   <div className="flex items-center space-x-1">
                     <span className="text-sm text-gray-600">Go to:</span>
                     <input
@@ -386,27 +350,14 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
                       className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder={String(currentPage)}
                     />
-                    <button
-                      onClick={handleJumpToPage}
-                      disabled={loading}
-                      className="px-2 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                    >
+                    <button onClick={handleJumpToPage} disabled={loading} className="px-2 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
                       Go
                     </button>
                   </div>
-                  
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={!data.has_next || loading}
-                    className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
-                  >
+                  <button onClick={() => handlePageChange(currentPage + 1)} disabled={!data.has_next || loading} className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50">
                     <ChevronRight className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => handlePageChange(data.total_pages)}
-                    disabled={!data.has_next || loading}
-                    className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
-                  >
+                  <button onClick={() => handlePageChange(data.total_pages)} disabled={!data.has_next || loading} className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50">
                     Last »
                   </button>
                 </div>
@@ -428,58 +379,56 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
         </div>
       )}
 
-      {/* Data Table */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      {/* Data Table Wrapper: 스크롤 문제를 해결하기 위해 이 부분을 수정했습니다. */}
+      <div className="flex-1 min-h-0 overflow-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-32">
+          <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             <span className="ml-2 text-gray-600">Loading data...</span>
           </div>
-        ) : data ? (
-          <div className="h-full overflow-y-auto overflow-x-auto">
-            <table className="w-full table-fixed">
-              <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
-                <tr>
+        ) : data && data.data.length > 0 ? (
+          <table className="w-full table-fixed">
+            <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
+              <tr>
+                {getVisibleColumnsInOrder().map((column) => (
+                  <ColumnHeader
+                    key={column.name}
+                    column={column.name}
+                    dataType={column.data_type}
+                    sampleValues={column.sample_values}
+                    sortOrder={sortRules.find(r => r.column === column.name)?.order}
+                    hasFilter={filters.has(column.name)}
+                    onSort={handleSort}
+                    onFilter={handleFilter}
+                    onAnalyze={handleAnalyze}
+                    onColumnSearch={handleColumnSearch}
+                  />
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {data.data.map((row, rowIndex) => (
+                <tr
+                  key={rowIndex}
+                  className={`hover:bg-gray-50 group ${
+                    highlightRows.has(rowIndex) ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''
+                  }`}
+                >
                   {getVisibleColumnsInOrder().map((column) => (
-                    <ColumnHeader
+                    <DataCell
                       key={column.name}
+                      value={row[column.name]}
                       column={column.name}
-                      dataType={column.data_type}
-                      sampleValues={column.sample_values}
-                      sortOrder={sortRules.find(r => r.column === column.name)?.order}
-                      hasFilter={filters.has(column.name)}
-                      onSort={handleSort}
-                      onFilter={handleFilter}
-                      onAnalyze={handleAnalyze}
-                      onColumnSearch={handleColumnSearch}
+                      rowIndex={(currentPage - 1) * pageSize + rowIndex}
+                      maxWidth={300}
                     />
                   ))}
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {data.data.map((row, rowIndex) => (
-                  <tr 
-                    key={rowIndex} 
-                    className={`hover:bg-gray-50 group ${
-                      highlightRows.has(rowIndex) ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''
-                    }`}
-                  >
-                    {getVisibleColumnsInOrder().map((column) => (
-                      <DataCell
-                        key={column.name}
-                        value={row[column.name]}
-                        column={column.name}
-                        rowIndex={(currentPage - 1) * pageSize + rowIndex}
-                        maxWidth={300}
-                      />
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         ) : (
-          <div className="flex items-center justify-center h-32">
+          <div className="flex items-center justify-center h-full">
             <span className="text-gray-500">No data available</span>
           </div>
         )}
