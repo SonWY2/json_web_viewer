@@ -137,11 +137,11 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
               {onAnalyze && (
                 <button
                   onClick={handleAnalyze}
-                  className="rounded hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-colors cursor-pointer"
+                  className="p-0.5 rounded hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-colors cursor-pointer"
                   title="Analyze this column"
                   onMouseDown={(e) => e.stopPropagation()}
                 >
-                  <BarChart3 className="w-2 h-2" />
+                  <BarChart3 className="w-3 h-3" />
                 </button>
               )}
             </div>
