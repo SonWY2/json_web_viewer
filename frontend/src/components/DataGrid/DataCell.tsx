@@ -75,15 +75,15 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
         >
           {displayValue ? (
             <div 
-              className="text-xs leading-relaxed overflow-hidden p-1 rounded"
+              className="text-xs leading-relaxed overflow-hidden p-1 rounded whitespace-pre-line"
               style={{ 
                 minHeight: '20px',
-                wordBreak: 'break-all'
+                wordBreak: 'break-word'
               }}
             >
               {isLongContent ? (
                 <span 
-                  className="cursor-pointer hover:bg-blue-50 rounded block overflow-hidden text-ellipsis p-1"
+                  className="cursor-pointer hover:bg-blue-50 rounded block overflow-hidden text-ellipsis p-1 whitespace-pre-line"
                   onClick={handleCellClick}
                   title="Click to view full content"
                 >
@@ -91,7 +91,7 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
                 </span>
               ) : (
                 <span 
-                  className="cursor-pointer hover:bg-blue-50 rounded block overflow-hidden p-1"
+                  className="cursor-pointer hover:bg-blue-50 rounded block overflow-hidden p-1 whitespace-pre-line"
                   onClick={handleCellClick}
                   title="Click to view content"
                 >
@@ -107,7 +107,7 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
               }}
             >
               <span 
-                className="text-gray-400 italic text-xs block cursor-pointer hover:bg-blue-50 rounded overflow-hidden p-1"
+                className="text-gray-400 italic text-xs block cursor-pointer hover:bg-blue-50 rounded overflow-hidden p-1 whitespace-pre-line"
                 onClick={handleCellClick}
                 title="Click to view content"
               >
