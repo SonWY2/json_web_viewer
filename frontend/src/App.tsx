@@ -27,6 +27,8 @@ function App() {
   } = useAnalysisStore()
   
   const [showExportModal, setShowExportModal] = useState(false)
+  const [showAnalysisPanel, setShowAnalysisPanel] = useState(true)
+  const [userClosedAnalysis, setUserClosedAnalysis] = useState(false)
   const [showFileExplorer, setShowFileExplorer] = useState(true)
   const dataGridRef = useRef<any>(null)
 
@@ -54,7 +56,21 @@ function App() {
 
   const activeTasks = getActiveTasksArray()
   const selectedAnalysis = selectedColumn ? getColumnAnalysis(selectedColumn) : null
-  const showAnalysisPanel = activeTasks.length > 0 || selectedAnalysis || columnAnalyses.size > 0
+  const hasAnalysisData = activeTasks.length > 0 || selectedAnalysis || columnAnalyses.size > 0
+  
+  // 분석 데이터가 있을 때만 사이드바를 자동으로 열기 (사용자가 수동으로 닫지 않았을 때)
+  useEffect(() => {
+    if (hasAnalysisData && !showAnalysisPanel && !userClosedAnalysis) {
+      setShowAnalysisPanel(true)
+    }
+  }, [hasAnalysisData, showAnalysisPanel, userClosedAnalysis])
+
+  // 새로운 분석이 시작되면 닫기 상태 리셋
+  useEffect(() => {
+    if (activeTasks.length > 0) {
+      setUserClosedAnalysis(false)
+    }
+  }, [activeTasks.length])
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -97,15 +113,27 @@ function App() {
                 </div>
                 
                 {/* Right Sidebar - Analysis */}
-                {showAnalysisPanel && (
+                {showAnalysisPanel && hasAnalysisData && (
                   <div className="w-96 bg-white border-l border-gray-200 overflow-y-auto">
-                    <div className="p-4 border-b border-gray-200">
-                      <h2 className="text-lg font-medium text-gray-900">Analysis</h2>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {activeTasks.length > 0 && `${activeTasks.length} active task${activeTasks.length === 1 ? '' : 's'}`}
-                        {activeTasks.length > 0 && columnAnalyses.size > 0 && ' • '}
-                        {columnAnalyses.size > 0 && `${columnAnalyses.size} result${columnAnalyses.size === 1 ? '' : 's'}`}
-                      </p>
+                    <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                      <div>
+                        <h2 className="text-lg font-medium text-gray-900">Analysis</h2>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {activeTasks.length > 0 && `${activeTasks.length} active task${activeTasks.length === 1 ? '' : 's'}`}
+                          {activeTasks.length > 0 && columnAnalyses.size > 0 && ' • '}
+                          {columnAnalyses.size > 0 && `${columnAnalyses.size} result${columnAnalyses.size === 1 ? '' : 's'}`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowAnalysisPanel(false)
+                          setUserClosedAnalysis(true)
+                        }}
+                        className="p-1 hover:bg-gray-200 rounded"
+                        title="Close analysis panel"
+                      >
+                        <X className="w-4 h-4 text-gray-500" />
+                      </button>
                     </div>
                     
                     <div className="p-4 space-y-4">
