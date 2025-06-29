@@ -19,9 +19,9 @@ export interface UseColumnResizeReturn {
 
 export const useColumnResize = ({
   columnId,
-  initialWidth = 80,
-  minWidth = 40,
-  maxWidth = 250
+  initialWidth = 150,
+  minWidth = 80,
+  maxWidth = 800
 }: UseColumnResizeProps): UseColumnResizeReturn => {
   const { columnWidths, setColumnWidth } = useDataStore()
   const [isResizing, setIsResizing] = useState(false)

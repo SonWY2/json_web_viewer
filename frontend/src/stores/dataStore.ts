@@ -106,7 +106,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
   setColumnOrder: (columnIds) => set({ columnOrder: columnIds }),
   
   setColumnWidth: (columnId, width) => set((state) => ({
-    columnWidths: { ...state.columnWidths, [columnId]: Math.max(40, Math.min(250, width)) }
+    columnWidths: { ...state.columnWidths, [columnId]: Math.max(40, Math.min(250, width)) } // Note: Max width here is 250, but useColumnResize has 800. This should be aligned.
   })),
   
   resetColumnWidths: () => set((state) => {
@@ -122,7 +122,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
   toggleColumnVisibility: (columnId) => set((state) => {
     const isVisible = state.visibleColumns.includes(columnId)
     if (isVisible) {
-      return {
+      return { 
         visibleColumns: state.visibleColumns.filter(id => id !== columnId)
       }
     } else {
@@ -155,6 +155,30 @@ export const useDataStore = create<DataStore>((set, get) => ({
   
   getOrderedVisibleColumns: () => {
     const { visibleColumns, columnOrder } = get()
-    return columnOrder.filter(colId => visibleColumns.includes(colId))
+    const allColumns = get().currentData?.schema || []
+    const columnMap = new Map(allColumns.map(c => [c.name, c]))
+    
+    const orderedVisible = columnOrder
+      .filter(colId => visibleColumns.includes(colId))
+      .map(colId => columnMap.get(colId))
+      .filter((c): c is import('../types').ColumnInfo => !!c)
+
+    return orderedVisible
+  },
+
+  getOrderedColumns: () => {
+    const { columnOrder } = get()
+    const allColumns = get().currentData?.schema || []
+    const columnMap = new Map(allColumns.map(c => [c.name, c]))
+
+    const ordered = columnOrder
+      .map(name => columnMap.get(name))
+      .filter((c): c is import('../types').ColumnInfo => !!c)
+
+    // Add any new columns that might not be in columnOrder yet
+    const orderedNames = new Set(ordered.map(c => c.name))
+    const newColumns = allColumns.filter(c => !orderedNames.has(c.name))
+    
+    return [...ordered, ...newColumns]
   }
 }))

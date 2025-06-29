@@ -3,16 +3,67 @@ import { useFileStore } from '../../stores/fileStore'
 import { useAnalysisStore } from '../../stores/analysisStore'
 import { useDataStore } from '../../stores/dataStore'
 import { apiService } from '../../services/api'
-import { DataRequest, DataChunk, SortOrder, FilterRule, FilterRequest, FilterGroup, LogicalOperator, SearchResponse, FilterOperator } from '../../types'
+import { DataRequest, DataChunk, SortOrder, FilterRule, FilterRequest, FilterGroup, LogicalOperator, SearchResponse, FilterOperator, Column } from '../../types'
 import ColumnHeader from './ColumnHeader'
 import DataCell from './DataCell'
 import ColumnSelector from './ColumnSelector'
 import ResizeHandle from './ResizeHandle'
+import { useColumnResize } from '../../hooks/useColumnResize'
 import { ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
 
 interface DataGridRef {
   handleGlobalSearchResults: (results: SearchResponse | null) => void
 }
+
+interface ResizableHeaderProps {
+  column: Column
+  sortOrder?: SortOrder
+  hasFilter: boolean
+  onSort: (column: string, order: SortOrder) => void
+  onFilter: (column: string, rule: FilterRule | null) => void
+  onAnalyze?: (column: string) => void
+  onColumnSearch?: (column: string, query: string) => void
+}
+
+const ResizableHeader: React.FC<ResizableHeaderProps> = ({ column, sortOrder, hasFilter, onSort, onFilter, onAnalyze, onColumnSearch }) => {
+  const { width, isResizing, resizeHandleProps } = useColumnResize({
+    columnId: column.name,
+    initialWidth: 200,
+    minWidth: 80,
+    maxWidth: 800,
+  });
+
+  return (
+    <th
+      className="bg-gray-50 border-b border-gray-200 p-0 relative select-none"
+      style={{
+        width: `${width}px`,
+      }}
+    >
+      <div className="flex h-full">
+        <div className="flex-1 overflow-hidden">
+          <ColumnHeader
+            column={column.name}
+            dataType={column.data_type}
+            sampleValues={column.sample_values}
+            sortOrder={sortOrder}
+            hasFilter={hasFilter}
+            onSort={onSort}
+            onFilter={onFilter}
+            onAnalyze={onAnalyze}
+            onColumnSearch={onColumnSearch}
+            width={width}
+          />
+        </div>
+        <ResizeHandle
+          column={column.name}
+          isResizing={isResizing}
+          resizeHandleProps={resizeHandleProps}
+        />
+      </div>
+    </th>
+  );
+};
 
 const DataGrid = forwardRef<DataGridRef>((props, ref) => {
   const { currentFile } = useFileStore()
@@ -21,14 +72,12 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     visibleColumns,
     columnOrder,
     columnWidths,
-    setVisibleColumns,
-    setColumnOrder,
     setColumnWidth,
+    setColumnOrder,
     toggleColumnVisibility,
     showAllColumns,
     hideAllColumns,
     resetColumnWidths,
-    getOrderedVisibleColumns,
     setCurrentData
   } = useDataStore()
 
@@ -44,41 +93,41 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
   const [highlightRows, setHighlightRows] = useState<Set<number>>(new Set())
   const [columnSearches, setColumnSearches] = useState<Map<string, string>>(new Map())
 
-  const getVisibleColumnsInOrder = () => {
-    if (!currentFile) return []
-    if (visibleColumns.length === 0) {
-      return currentFile.columns
-    }
-    const orderedVisible = getOrderedVisibleColumns()
-    return currentFile.columns.filter(col => orderedVisible.includes(col.name))
-  }
+  const allColumnsInOrder = React.useMemo(() => {
+    if (!currentFile?.columns) return []
+    const columnMap = new Map(currentFile.columns.map(c => [c.name, c]))
+    const ordered = columnOrder
+      .map(name => columnMap.get(name))
+      .filter((c): c is Column => !!c)
+    const orderedNames = new Set(ordered.map(c => c.name))
+    const newColumns = currentFile.columns.filter(c => !orderedNames.has(c.name))
+    return [...ordered, ...newColumns]
+  }, [currentFile?.columns, columnOrder])
 
-  // 초기 컬럼 너비를 브라우저 너비에 맞춰 계산
-  const calculateInitialColumnWidths = () => {
+  const visibleColumnsInOrder = React.useMemo(() => {
+    return allColumnsInOrder.filter(c => visibleColumns.includes(c.name))
+  }, [allColumnsInOrder, visibleColumns])
+
+  const calculateInitialColumnWidths = React.useCallback(() => {
     if (!currentFile) return
     
-    const visibleCols = getVisibleColumnsInOrder()
+    const visibleCols = visibleColumnsInOrder; // Changed
     if (visibleCols.length === 0) return
     
-    // 이미 너비가 설정된 컬럼이 있다면 건드리지 않음
     const hasExistingWidths = visibleCols.some(col => columnWidths[col.name])
     if (hasExistingWidths) return
     
-    // 브라우저 너비에서 스크롤바와 패딩을 뺀 사용 가능한 너비
     const availableWidth = window.innerWidth - 100
     const columnCount = visibleCols.length
-    
-    // 각 컬럼의 초기 너비 계산 (최소 80px, 최대 250px)
     const idealWidth = Math.floor(availableWidth / columnCount)
     const columnWidth = Math.max(80, Math.min(250, idealWidth))
     
-    // 모든 컬럼에 동일한 너비 적용
     visibleCols.forEach(col => {
-      if (!columnWidths[col.name]) { // 기존 너비가 없는 경우만
+      if (!columnWidths[col.name]) {
         setColumnWidth(col.name, columnWidth)
       }
     })
-  }
+  }, [currentFile, visibleColumnsInOrder, columnWidths, setColumnWidth])
 
   useEffect(() => {
     if (currentFile) {
@@ -93,11 +142,9 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
         schema: currentFile.columns
       }
       setCurrentData(mockDataChunk)
-      
-      // 초기 컬럼 너비 계산 및 적용
-      setTimeout(() => calculateInitialColumnWidths(), 100)
+      calculateInitialColumnWidths() // Call directly
     }
-  }, [currentFile, setCurrentData])
+  }, [currentFile, setCurrentData, calculateInitialColumnWidths])
 
   useImperativeHandle(ref, () => ({
     handleGlobalSearchResults: (results: SearchResponse | null) => {
@@ -157,7 +204,6 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
 
       if (searchResults && searchResults.matching_rows.length > 0) {
         const pageStartIndex = (result.page - 1) * pageSize
-        const pageEndIndex = pageStartIndex + pageSize
         const highlightedInPage = new Set<number>()
         setHighlightRows(highlightedInPage)
       } else {
@@ -285,7 +331,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
           <div className="flex items-center space-x-4">
             {currentFile && (
               <ColumnSelector
-                columns={currentFile.columns}
+                columns={allColumnsInOrder} // Changed
                 visibleColumns={visibleColumns}
                 onVisibilityChange={toggleColumnVisibility}
                 onOrderChange={setColumnOrder}
@@ -369,50 +415,20 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
             <span className="ml-2 text-gray-600">Loading data...</span>
           </div>
         ) : data && data.data.length > 0 ? (
-          <table className="data-grid-table">
+          <table className="data-grid-table w-full" style={{ tableLayout: 'fixed' }}>
             <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
               <tr>
-                {getVisibleColumnsInOrder().map((column, index) => (
-                  <th
+                {visibleColumnsInOrder.map((column) => (
+                  <ResizableHeader
                     key={column.name}
-                    className="bg-gray-50 border-b border-gray-200"
-                    style={{ 
-                      width: `${columnWidths[column.name] || 200}px`,
-                      maxWidth: `${columnWidths[column.name] || 200}px`,
-                      minWidth: `${columnWidths[column.name] || 200}px`,
-                      padding: 0
-                    }}
-                  >
-                    {/* Flex 컨테이너로 헤더 콘텐츠와 리사이즈 핸들 분리 */}
-                    <div className="flex h-full">
-                      {/* 헤더 콘텐츠 영역 */}
-                      <div className="flex-1" style={{ width: `${(columnWidths[column.name] || 200) - 8}px` }}>
-                        <ColumnHeader
-                          column={column.name}
-                          dataType={column.data_type}
-                          sampleValues={column.sample_values}
-                          sortOrder={sortRules.find(r => r.column === column.name)?.order}
-                          hasFilter={filters.has(column.name)}
-                          onSort={handleSort}
-                          onFilter={handleFilter}
-                          onAnalyze={handleAnalyze}
-                          onColumnSearch={handleColumnSearch}
-                          width={(columnWidths[column.name] || 200) - 8}
-                        />
-                      </div>
-                      
-                      {/* 리사이즈 핸들 영역 */}
-                      <div style={{ width: '8px', flexShrink: 0 }}>
-                        <ResizeHandle
-                          column={column.name}
-                          width={columnWidths[column.name] || 200}
-                          onWidthChange={(newWidth) => {
-                            console.log(`📝 Column ${column.name} resized to ${newWidth}px`)
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </th>
+                    column={column}
+                    sortOrder={sortRules.find(r => r.column === column.name)?.order}
+                    hasFilter={filters.has(column.name)}
+                    onSort={handleSort}
+                    onFilter={handleFilter}
+                    onAnalyze={handleAnalyze}
+                    onColumnSearch={handleColumnSearch}
+                  />
                 ))}
               </tr>
             </thead>
@@ -424,13 +440,12 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
                     highlightRows.has(rowIndex) ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''
                   }`}
                 >
-                  {getVisibleColumnsInOrder().map((column) => (
+                  {visibleColumnsInOrder.map((column) => (
                     <DataCell
                       key={column.name}
                       value={row[column.name]}
                       column={column.name}
                       rowIndex={(currentPage - 1) * pageSize + rowIndex}
-                      maxWidth={columnWidths[column.name] || 200}
                       width={columnWidths[column.name] || 200}
                     />
                   ))}

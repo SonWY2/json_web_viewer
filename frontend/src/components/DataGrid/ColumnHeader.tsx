@@ -90,19 +90,24 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
           <div className="flex items-center justify-between mb-1">
             <button
               onClick={handleSort}
-              className="flex items-center text-left hover:text-blue-600 min-w-0 group cursor-pointer flex-1 w-full"
+              className="flex items-center justify-between text-left hover:text-blue-600 min-w-0 group cursor-pointer flex-1 w-full"
               title={`Click to sort ${column} (${dataType})`}
               style={{ 
                 cursor: 'pointer !important'
               }}
             >
-              <span className="text-xs font-medium text-gray-700 uppercase tracking-wider flex-1 mr-1 column-name">
-                {column}
-              </span>
-              <div className="flex items-center space-x-0.5 flex-shrink-0">
-                <span className="text-xs px-1 py-0.5 bg-gray-200 text-gray-600 rounded font-mono opacity-60 group-hover:opacity-100 transition-opacity">
+              {/* Group for column name and type */}
+              <div className="flex items-center min-w-0 flex-1">
+                <span className="text-xs font-medium text-gray-700 uppercase tracking-wider truncate mr-1.5 column-name">
+                  {column}
+                </span>
+                <span className="text-xs px-1 py-0.5 bg-gray-200 text-gray-600 rounded font-mono opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0">
                   {getTypeAbbreviation(dataType)}
                 </span>
+              </div>
+
+              {/* Sort icon on the right */}
+              <div className="flex-shrink-0">
                 {getSortIcon()}
               </div>
             </button>
