@@ -75,16 +75,15 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
         >
           {displayValue ? (
             <div 
-              className="text-xs leading-relaxed overflow-hidden"
+              className="text-xs leading-relaxed overflow-hidden p-1 rounded"
               style={{ 
                 minHeight: '20px',
-                wordBreak: 'break-all',
-                padding: '0px'
+                wordBreak: 'break-all'
               }}
             >
               {isLongContent ? (
                 <span 
-                  className="cursor-pointer hover:bg-yellow-50 rounded block overflow-hidden text-ellipsis"
+                  className="cursor-pointer hover:bg-blue-50 rounded block overflow-hidden text-ellipsis p-1"
                   onClick={handleCellClick}
                   title="Click to view full content"
                 >
@@ -92,7 +91,7 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
                 </span>
               ) : (
                 <span 
-                  className="cursor-pointer hover:bg-yellow-50 rounded block overflow-hidden"
+                  className="cursor-pointer hover:bg-blue-50 rounded block overflow-hidden p-1"
                   onClick={handleCellClick}
                   title="Click to view content"
                 >
@@ -102,14 +101,13 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
             </div>
           ) : (
             <div 
-              className="overflow-hidden"
+              className="overflow-hidden p-1 rounded"
               style={{ 
-                minHeight: '20px',
-                padding: '0px'
+                minHeight: '20px'
               }}
             >
               <span 
-                className="text-gray-400 italic text-xs block cursor-pointer hover:bg-yellow-50 rounded overflow-hidden"
+                className="text-gray-400 italic text-xs block cursor-pointer hover:bg-blue-50 rounded overflow-hidden p-1"
                 onClick={handleCellClick}
                 title="Click to view content"
               >
