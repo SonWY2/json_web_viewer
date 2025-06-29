@@ -28,8 +28,8 @@ interface ResizableHeaderProps {
 const ResizableHeader: React.FC<ResizableHeaderProps> = ({ column, sortOrder, hasFilter, onSort, onFilter, onAnalyze, onColumnSearch }) => {
   const { width, isResizing, resizeHandleProps } = useColumnResize({
     columnId: column.name,
-    initialWidth: 200,
-    minWidth: 1,
+    initialWidth: 150,
+    minWidth: 80,
     maxWidth: 800,
   });
 
@@ -37,29 +37,29 @@ const ResizableHeader: React.FC<ResizableHeaderProps> = ({ column, sortOrder, ha
     <th
       className="bg-gray-50 border-b border-gray-200 p-0 relative select-none"
       style={{
-        width: `${width}px`,
+        width: `${width}px`
       }}
     >
-      <div className="flex h-full">
-        <div className="flex-1 overflow-hidden">
-          <ColumnHeader
+      <div className="relative w-full h-full">
+        <ColumnHeader
+          column={column.name}
+          dataType={column.data_type}
+          sampleValues={column.sample_values}
+          sortOrder={sortOrder}
+          hasFilter={hasFilter}
+          onSort={onSort}
+          onFilter={onFilter}
+          onAnalyze={onAnalyze}
+          onColumnSearch={onColumnSearch}
+          width={width}
+        />
+        <div className="absolute top-0 right-0 w-1.5 h-full">
+          <ResizeHandle
             column={column.name}
-            dataType={column.data_type}
-            sampleValues={column.sample_values}
-            sortOrder={sortOrder}
-            hasFilter={hasFilter}
-            onSort={onSort}
-            onFilter={onFilter}
-            onAnalyze={onAnalyze}
-            onColumnSearch={onColumnSearch}
-            width={width}
+            isResizing={isResizing}
+            resizeHandleProps={resizeHandleProps}
           />
         </div>
-        <ResizeHandle
-          column={column.name}
-          isResizing={isResizing}
-          resizeHandleProps={resizeHandleProps}
-        />
       </div>
     </th>
   );
@@ -111,20 +111,18 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
   const calculateInitialColumnWidths = React.useCallback(() => {
     if (!currentFile) return
     
-    const visibleCols = visibleColumnsInOrder; // Changed
+    const visibleCols = visibleColumnsInOrder
     if (visibleCols.length === 0) return
     
     const hasExistingWidths = visibleCols.some(col => columnWidths[col.name])
     if (hasExistingWidths) return
     
-    const availableWidth = window.innerWidth - 100
-    const columnCount = visibleCols.length
-    const idealWidth = Math.floor(availableWidth / columnCount)
-    const columnWidth = Math.max(5, Math.min(250, idealWidth))
+    // Set default width to 150px instead of calculating based on screen width
+    const defaultWidth = 150
     
     visibleCols.forEach(col => {
       if (!columnWidths[col.name]) {
-        setColumnWidth(col.name, columnWidth)
+        setColumnWidth(col.name, defaultWidth)
       }
     })
   }, [currentFile, visibleColumnsInOrder, columnWidths, setColumnWidth])
@@ -415,7 +413,21 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
             <span className="ml-2 text-gray-600">Loading data...</span>
           </div>
         ) : data && data.data.length > 0 ? (
-          <table className="data-grid-table w-full" style={{ tableLayout: 'fixed' }}>
+          <table 
+            className="data-grid-table" 
+            style={{ 
+              tableLayout: 'fixed',
+              width: `${visibleColumnsInOrder.reduce((sum, col) => sum + (columnWidths[col.name] || 150), 0)}px`
+            }}
+          >
+            <colgroup>
+              {visibleColumnsInOrder.map((column) => (
+                <col 
+                  key={column.name} 
+                  style={{ width: `${columnWidths[column.name] || 150}px` }} 
+                />
+              ))}
+            </colgroup>
             <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
               <tr>
                 {visibleColumnsInOrder.map((column) => (
@@ -446,7 +458,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
                       value={row[column.name]}
                       column={column.name}
                       rowIndex={(currentPage - 1) * pageSize + rowIndex}
-                      width={columnWidths[column.name] || 200}
+                      width={columnWidths[column.name] || 150}
                     />
                   ))}
                 </tr>

@@ -65,61 +65,36 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
   return (
     <>
       <td 
-        className="px-0 py-1 text-sm text-gray-900 border-b border-gray-200 group relative"
+        className="px-2 py-1 text-sm text-gray-900 border-b border-gray-200 group relative"
         style={{ 
-          width: `${width}px`,
-          maxWidth: `${width}px`,
-          minWidth: `${width}px`,
-          boxSizing: 'border-box'
+          overflow: 'hidden'
         }}
       >
         <div 
-          className="w-full h-full"
-          style={{
-            width: `${width}px`,
-            maxWidth: `${width}px`,
-            minWidth: `${width}px`,
-            boxSizing: 'border-box',
-            overflow: 'hidden'
-          }}
+          className="w-full h-full overflow-hidden"
         >
           {displayValue ? (
             <div 
-              className="text-xs leading-relaxed"
+              className="text-xs leading-relaxed overflow-hidden"
               style={{ 
-                minHeight: '20px', 
-                width: `${width - 4}px`, // padding 2px * 2 = 4px 제외
-                maxWidth: `${width - 4}px`,
-                minWidth: `${width - 4}px`,
+                minHeight: '20px',
                 wordBreak: 'break-all',
-                padding: '2px',
-                boxSizing: 'border-box',
-                overflow: 'hidden'
+                padding: '0px'
               }}
             >
               {isLongContent ? (
                 <span 
-                  className="cursor-pointer hover:bg-yellow-50 rounded block"
+                  className="cursor-pointer hover:bg-yellow-50 rounded block overflow-hidden text-ellipsis"
                   onClick={handleCellClick}
                   title="Click to view full content"
-                  style={{ 
-                    width: '100%',
-                    display: 'block',
-                    overflow: 'hidden'
-                  }}
                 >
                   {truncatedValue}
                 </span>
               ) : (
                 <span 
-                  className="cursor-pointer hover:bg-yellow-50 rounded block"
+                  className="cursor-pointer hover:bg-yellow-50 rounded block overflow-hidden"
                   onClick={handleCellClick}
                   title="Click to view content"
-                  style={{ 
-                    width: '100%',
-                    display: 'block',
-                    overflow: 'hidden'
-                  }}
                 >
                   {displayValue}
                 </span>
@@ -127,24 +102,16 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
             </div>
           ) : (
             <div 
+              className="overflow-hidden"
               style={{ 
-                width: `${width}px`, // padding 2px * 2 = 4px 제외
-                maxWidth: `${width}px`,
-                minWidth: `${width}px`,
                 minHeight: '20px',
-                padding: '0px',
-                boxSizing: 'border-box',
-                overflow: 'hidden'
+                padding: '0px'
               }}
             >
               <span 
-                className="text-gray-400 italic text-xs block cursor-pointer hover:bg-yellow-50 rounded"
+                className="text-gray-400 italic text-xs block cursor-pointer hover:bg-yellow-50 rounded overflow-hidden"
                 onClick={handleCellClick}
                 title="Click to view content"
-                style={{
-                  width: '100%',
-                  overflow: 'hidden'
-                }}
               >
                 null
               </span>

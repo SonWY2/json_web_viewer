@@ -28,6 +28,8 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   onColumnSearch,
   width
 }) => {
+
+
   const [showColumnSearch, setShowColumnSearch] = useState(false)
   const [columnSearchQuery, setColumnSearchQuery] = useState('')
 
@@ -78,11 +80,7 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
 
   return (
     <div 
-      className="px-0.5 py-1 h-full"
-      style={{ 
-        width: `${width || 192}px`, 
-        minWidth: `${width || 192}px`
-      }}
+      className="px-2 py-1 h-full pr-2 w-full"
     >
         {/* Header content - 완전히 독립적인 영역 */}
         <div className="relative">
@@ -92,16 +90,20 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
               onClick={handleSort}
               className="flex items-center justify-between text-left hover:text-blue-600 group cursor-pointer flex-1 w-full"
               title={`Click to sort ${column} (${dataType})`}
-              style={{ 
-                cursor: 'pointer !important'
-              }}
             >
               {/* Group for column name and type */}
-              <div className="flex items-center flex-1">
-                <span className="text-xs font-medium text-gray-700 uppercase tracking-wider truncate mr-1.5 column-name">
+              <div className="flex items-center flex-1 min-w-0">
+                <span 
+                  className="text-xs font-medium text-gray-700 uppercase tracking-wider truncate"
+                  style={{
+                    flexGrow: 1,
+                    marginRight: '2px',
+                    minWidth: '0'
+                  }}
+                >
                   {column}
                 </span>
-                <span className="text-xs py-0.5 bg-gray-200 text-gray-600 rounded font-mono opacity-60 group-hover:opacity-100 transition-opacity">
+                <span className="text-xs px-1 py-0.5 bg-gray-200 text-gray-600 rounded font-mono opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0">
                   {getTypeAbbreviation(dataType)}
                 </span>
               </div>

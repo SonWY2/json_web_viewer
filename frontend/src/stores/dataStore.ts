@@ -71,7 +71,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
           
           // Initialize default column widths
           const defaultWidths = Object.fromEntries(
-            columnIds.map(id => [id, state.columnWidths[id] || 80])
+            columnIds.map(id => [id, state.columnWidths[id] || 150])
           )
           newState.columnWidths = { ...defaultWidths, ...state.columnWidths }
         }
@@ -106,13 +106,13 @@ export const useDataStore = create<DataStore>((set, get) => ({
   setColumnOrder: (columnIds) => set({ columnOrder: columnIds }),
   
   setColumnWidth: (columnId, width) => set((state) => ({
-    columnWidths: { ...state.columnWidths, [columnId]: Math.max(40, Math.min(250, width)) } // Note: Max width here is 250, but useColumnResize has 800. This should be aligned.
+    columnWidths: { ...state.columnWidths, [columnId]: Math.max(80, Math.min(800, width)) }
   })),
   
   resetColumnWidths: () => set((state) => {
     if (state.currentData?.schema) {
       const defaultWidths = Object.fromEntries(
-        state.currentData.schema.map(col => [col.name, 80])
+        state.currentData.schema.map(col => [col.name, 150])
       )
       return { columnWidths: defaultWidths }
     }
@@ -136,7 +136,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
     if (state.currentData?.schema) {
       const allColumnIds = state.currentData.schema.map(col => col.name)
       const defaultWidths = Object.fromEntries(
-        allColumnIds.map(id => [id, state.columnWidths[id] || 80])
+        allColumnIds.map(id => [id, state.columnWidths[id] || 150])
       )
       return { 
         visibleColumns: [...allColumnIds],

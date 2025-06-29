@@ -55,8 +55,6 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
   const visibleCount = visibleColumns.length
   const totalCount = columns.length
 
-  console.log('ColumnSelector Debug:', { visibleColumns, totalCount, columnOrder: columns.map(c => c.name) })
-
   return (
     <div className="relative">
       <button

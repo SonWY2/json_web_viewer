@@ -1,164 +1,107 @@
 # JSONL Viewer
 
-대용량 JSONL 파일을 손쉽게 탐색하고 분석할 수 있는 웹 기반 뷰어
+대용량 JSONL 파일을 효율적으로 탐색하고 분석할 수 있는 웹 기반 뷰어입니다.
 
-## 🚀 주요 기능
+## ✨ 주요 기능
 
-### ✅ 구현완료
-- **파일시스템 탐색**: 안전한 디렉토리 브라우징 및 파일 선택
-- **크로스 플랫폼**: Windows, macOS, Linux 지원
-- **API 인프라**: FastAPI 기반 RESTful API
-- **반응형 UI**: React + TypeScript + Tailwind CSS
-- **타입 안전**: 프론트엔드와 백엔드 모두 타입 검증
+### 🚀 즉시 사용 가능한 기능 (Phase 1)
+- **빠른 파일 로딩**: 스트리밍 방식으로 헤더 분석 및 스키마 자동 감지
+- **실시간 데이터 표시**: 샘플 데이터로 즉시 UI 표시
+- **유연한 컬럼 관리**: 크기 조절, 숨김/표시, 순서 변경
+- **서버사이드 페이지네이션**: 효율적인 대용량 데이터 처리
+- **기본 검색 및 필터링**: 빠른 데이터 탐색
+- **마크다운 렌더링**: 긴 텍스트 및 코드 블록 지원
 
-### 🔄 진행중
-- **스트리밍 파일 로더**: 빠른 스키마 감지 및 메타데이터 생성
-- **데이터 그리드**: 페이지네이션 및 가상 스크롤링
-- **기본 검색**: 전역 및 컬럼별 검색
+### 📊 On-Demand 분석 기능 (Phase 2)
+- **컬럼별 통계 요청**: 필요한 컬럼만 선택적 분석
+- **백그라운드 작업 관리**: 진행률 표시 및 작업 상태 추적
+- **고급 필터링**: 타입별 필터 및 복합 조건
+- **결과 캐싱**: 한 번 계산된 분석 결과 재사용
+- **데이터 품질 검사**: 중복, 누락값 등 데이터 품질 분석
 
-### 📋 예정
-- **고급 필터링**: Excel 수준의 데이터 조작
-- **마크다운 지원**: 긴 텍스트 및 코드 렌더링
-- **컬럼 통계**: On-demand 분석 및 시각화
-- **내보내기**: 다양한 형식 지원
+## 🚀 빠른 시작
+
+### 자동 설정 (권장)
+```bash
+# 1. 프로젝트 클론
+git clone https://github.com/your-repo/jsonl-viewer.git
+cd jsonl-viewer
+
+# 2. 자동 설정 실행
+chmod +x scripts/setup.sh
+./scripts/setup.sh
+
+# 3. 개발 서버 시작
+chmod +x scripts/start-dev.sh
+./scripts/start-dev.sh
+```
+
+### Windows 사용자
+```cmd
+# 프로젝트 클론 후
+scripts\setup.bat
+scripts\start-dev.bat
+```
+
+### 수동 설정
+필요한 경우 [개발 환경 설정](#-개발-환경-설정) 섹션 참조
+
+## 📊 성능 특성
+
+- **최대 파일 크기**: 10GB+
+- **즉시 표시**: 30초 이내 (파일 크기 무관)
+- **메모리 효율성**: 파일 크기와 무관한 일정한 메모리 사용
 
 ## 🛠️ 기술 스택
 
-### Backend
-- **FastAPI**: Python 웹 프레임워크
-- **Pydantic-Settings**: 설정 관리
-- **SQLite**: 메타데이터 저장
-- **Uvicorn**: ASGI 서버
+**프론트엔드**: React 18 + TypeScript + Vite + Tailwind CSS + Zustand  
+**백엔드**: FastAPI + Pandas + ijson + SQLite + Whoosh
 
-### Frontend
-- **React 18**: UI 라이브러리
-- **TypeScript**: 타입 안전성
-- **Vite**: 빌드 도구
-- **Tailwind CSS**: 스타일링
-- **Zustand**: 상태 관리
-- **Lucide React**: 아이콘
+## 📖 사용 가이드
 
-## 📦 설치 및 실행
+1. **파일 업로드**: 상단 헤더에서 JSONL 파일 업로드 또는 URL 입력
+2. **데이터 탐색**: 컬럼 관리, 정렬, 필터링으로 데이터 탐색
+3. **분석 요청**: 필요한 컬럼만 선택하여 On-Demand 분석
+
+## 🔧 개발 환경 설정
 
 ### 필수 요구사항
-- Python 3.8+
-- Node.js 16+
+- Node.js 18+
+- Python 3.9+
 
-### 1. 저장소 클론
-```bash
-git clone <repository-url>
-cd jsonl-viewer
-```
-
-### 2. 백엔드 설정
+### 백엔드 설정
 ```bash
 cd backend
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python main.py
+cp .env.example .env  # 설정 편집 필요
+uvicorn main:app --reload --port 8000
 ```
 
-백엔드 서버가 http://localhost:8000 에서 실행됩니다.
-
-### 3. 프론트엔드 설정
+### 프론트엔드 설정
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-프론트엔드 앱이 http://localhost:5173 에서 실행됩니다.
+## 📝 로드맵
 
-## 🎯 사용법
+- ✅ **Phase 1**: 기본 파일 로딩 및 데이터 그리드 (완료)
+- 🚧 **Phase 2**: On-demand 분석 시스템 (진행 중)
+- 🎯 **Phase 3**: 고급 시각화 및 내보내기 (계획)
 
-### 파일 탐색
-1. 좌측 사이드바에서 **File Explorer** 열기
-2. 디렉토리 탐색하여 JSONL/JSON 파일 찾기
-3. 파일 클릭하여 로드
+## 🤝 기여하기
 
-### 지원 파일 형식
-- `.jsonl` - JSON Lines 형식
-- `.json` - JSON 파일 (배열 형태)
-
-### 파일 크기 제한
-- 최대 10GB 파일 지원
-- 스트리밍 처리로 메모리 효율적
-
-## 🏗️ 프로젝트 구조
-
-```
-jsonl-viewer/
-├── backend/          # FastAPI 서버
-│   ├── app/
-│   │   ├── api/      # API 엔드포인트
-│   │   ├── core/     # 설정 및 보안
-│   │   ├── models/   # 데이터 모델
-│   │   └── services/ # 비즈니스 로직
-│   └── main.py
-├── frontend/         # React 앱
-│   ├── src/
-│   │   ├── components/ # UI 컴포넌트
-│   │   ├── hooks/      # React 훅
-│   │   ├── stores/     # 상태 관리
-│   │   ├── services/   # API 통신
-│   │   └── types/      # TypeScript 타입
-│   └── package.json
-└── docs/            # 문서
-```
-
-## 🔒 보안
-
-### 파일시스템 보안
-- 시스템 디렉토리 접근 차단
-- 읽기 권한 검증
-- 안전한 경로 검증
-
-### API 보안
-- CORS 설정
-- 파일 크기 제한
-- 타입 검증
-
-## 🚧 개발 상황
-
-### Phase 1 (진행중)
-- [x] 파일시스템 탐색
-- [x] API 인프라
-- [x] 프론트엔드 기반
-- [ ] 스트리밍 파일 로더
-- [ ] 기본 데이터 그리드
-
-### Phase 2 (예정)
-- [ ] 고급 필터링
-- [ ] 검색 기능
-- [ ] 마크다운 렌더링
-- [ ] 컬럼 통계
-
-### Phase 3 (계획)
-- [ ] 시각화
-- [ ] 내보내기
-- [ ] 성능 최적화
-
-## 📝 API 문서
-
-백엔드 실행 후 다음 URL에서 API 문서 확인:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-## 🤝 기여
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
+1. Fork 후 Feature 브랜치 생성
+2. 변경사항 구현 및 테스트
+3. Pull Request 생성
 
 ## 📄 라이선스
 
-이 프로젝트는 MIT 라이선스 하에 있습니다. 자세한 내용은 `LICENSE` 파일을 참조하세요.
+MIT License
 
-## 🐛 버그 리포트
+---
 
-문제를 발견하셨나요? [Issues](../../issues)에서 버그 리포트를 작성해 주세요.
-
-## 📞 지원
-
-질문이나 제안사항이 있으시면 이슈를 생성하거나 이메일로 연락주세요.
+**대용량 JSONL 파일 처리를 더 쉽고 효율적으로 만들어보세요!**

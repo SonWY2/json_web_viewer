@@ -1,71 +1,118 @@
 #!/bin/bash
 
-# JSONL Viewer Development Setup Script
+# JSONL Viewer Initial Setup Script
 
-echo "🚀 Setting up JSONL Viewer..."
+echo "🔧 JSONL Viewer Initial Setup"
+echo "==============================="
 
-# Check if Python is installed
-if ! command -v python &> /dev/null; then
-    echo "❌ Python is not installed. Please install Python 3.8+ and try again."
-    exit 1
-fi
+# Check system requirements
+echo "🔍 Checking system requirements..."
 
-# Check if Node.js is installed
+# Check Node.js
 if ! command -v node &> /dev/null; then
-    echo "❌ Node.js is not installed. Please install Node.js 16+ and try again."
+    echo "❌ Node.js is not installed."
+    echo "📥 Please install Node.js 18+ from: https://nodejs.org/"
     exit 1
+else
+    NODE_VERSION=$(node --version)
+    echo "✅ Node.js found: $NODE_VERSION"
 fi
 
-echo "✅ Prerequisites check passed"
+# Check Python
+if command -v python3 &> /dev/null; then
+    PYTHON_CMD=python3
+    PYTHON_VERSION=$(python3 --version)
+elif command -v python &> /dev/null; then
+    PYTHON_CMD=python
+    PYTHON_VERSION=$(python --version)
+else
+    echo "❌ Python is not installed."
+    echo "📥 Please install Python 3.9+ from: https://python.org/"
+    exit 1
+fi
+echo "✅ Python found: $PYTHON_VERSION"
+
+# Check pip
+if ! command -v pip &> /dev/null; then
+    echo "❌ pip is not installed."
+    echo "📥 Please install pip first."
+    exit 1
+else
+    echo "✅ pip found"
+fi
+
+echo ""
+echo "📦 Setting up project dependencies..."
 
 # Setup backend
-echo "📦 Setting up backend..."
+echo "🔧 Setting up backend..."
 cd backend
 
-# Create virtual environment if it doesn't exist
-if [ ! -d "venv" ]; then
-    echo "Creating Python virtual environment..."
-    python -m venv venv
+# Create virtual environment
+if [ ! -d ".venv" ]; then
+    echo "📦 Creating Python virtual environment..."
+    $PYTHON_CMD -m venv .venv
+else
+    echo "✅ Virtual environment already exists"
 fi
 
 # Activate virtual environment
-echo "Activating virtual environment..."
-source venv/bin/activate 2>/dev/null || source venv/Scripts/activate
-
-# Install Python dependencies
-echo "Installing Python dependencies..."
-pip install -r requirements.txt
-
-# Copy environment file
-if [ ! -f ".env" ]; then
-    echo "Creating .env file..."
-    cp .env.example .env
+echo "🔧 Activating virtual environment..."
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+    # Windows (Git Bash)
+    source .venv/Scripts/activate
+else
+    # macOS/Linux
+    source .venv/bin/activate
 fi
 
-echo "✅ Backend setup complete"
+# Upgrade pip
+echo "⬆️ Upgrading pip..."
+pip install --upgrade pip
+
+# Install backend dependencies
+echo "📥 Installing backend dependencies..."
+pip install -r requirements.txt
+
+# Create environment file
+if [ ! -f ".env" ]; then
+    echo "⚙️ Creating environment configuration..."
+    cp .env.example .env
+    echo "✏️ Environment file created at backend/.env"
+    echo "   Please edit it with your configuration before running the application."
+else
+    echo "✅ Environment file already exists"
+fi
 
 # Setup frontend
-echo "📦 Setting up frontend..."
+echo ""
+echo "🌐 Setting up frontend..."
 cd ../frontend
 
-# Install Node.js dependencies
-echo "Installing Node.js dependencies..."
+# Install frontend dependencies
+echo "📥 Installing frontend dependencies..."
 npm install
 
-echo "✅ Frontend setup complete"
+# Create uploads directory
+echo "📁 Creating necessary directories..."
+mkdir -p ../backend/uploads
+mkdir -p ../backend/cache
 
 echo ""
-echo "🎉 Setup complete! To start the application:"
+echo "🎉 Setup completed successfully!"
 echo ""
-echo "1. Start backend (in one terminal):"
-echo "   cd backend"
-echo "   source venv/bin/activate  # or venv\\Scripts\\activate on Windows"
-echo "   python main.py"
+echo "📋 Next steps:"
+echo "1. Edit backend/.env file with your configuration"
+echo "2. Run './scripts/start-dev.sh' to start development servers"
+echo "   Or run './scripts/start-dev.bat' on Windows"
 echo ""
-echo "2. Start frontend (in another terminal):"
-echo "   cd frontend"
-echo "   npm run dev"
+echo "📚 Useful commands:"
+echo "   Backend only: cd backend && uvicorn main:app --reload"
+echo "   Frontend only: cd frontend && npm run dev"
 echo ""
-echo "3. Open http://localhost:3000 in your browser"
+echo "🌐 After starting:"
+echo "   Frontend: http://localhost:5173"
+echo "   Backend API: http://localhost:8000"
+echo "   API Documentation: http://localhost:8000/docs"
 echo ""
-echo "📊 Happy data exploring!"
+echo "❓ Need help? Check README.md or create an issue on GitHub"
