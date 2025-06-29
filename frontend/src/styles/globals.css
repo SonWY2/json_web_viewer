@@ -144,7 +144,7 @@ body {
   white-space: nowrap;
   display: block;
   max-width: 100%;
-  min-width: 30px; /* 최소 한 몇 글자는 보이도록 */
+  min-width: 15px; /* 최소 한 몇 글자는 보이도록 */
 }
 
 /* 리사이징 시 주변 요소들의 포인터 이벤트 비활성화 */

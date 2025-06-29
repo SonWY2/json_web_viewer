@@ -29,7 +29,7 @@ const ResizableHeader: React.FC<ResizableHeaderProps> = ({ column, sortOrder, ha
   const { width, isResizing, resizeHandleProps } = useColumnResize({
     columnId: column.name,
     initialWidth: 200,
-    minWidth: 80,
+    minWidth: 1,
     maxWidth: 800,
   });
 
@@ -120,7 +120,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     const availableWidth = window.innerWidth - 100
     const columnCount = visibleCols.length
     const idealWidth = Math.floor(availableWidth / columnCount)
-    const columnWidth = Math.max(80, Math.min(250, idealWidth))
+    const columnWidth = Math.max(5, Math.min(250, idealWidth))
     
     visibleCols.forEach(col => {
       if (!columnWidths[col.name]) {

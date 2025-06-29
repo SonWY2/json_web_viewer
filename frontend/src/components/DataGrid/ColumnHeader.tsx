@@ -90,18 +90,18 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
           <div className="flex items-center justify-between mb-1">
             <button
               onClick={handleSort}
-              className="flex items-center justify-between text-left hover:text-blue-600 min-w-0 group cursor-pointer flex-1 w-full"
+              className="flex items-center justify-between text-left hover:text-blue-600 group cursor-pointer flex-1 w-full"
               title={`Click to sort ${column} (${dataType})`}
               style={{ 
                 cursor: 'pointer !important'
               }}
             >
               {/* Group for column name and type */}
-              <div className="flex items-center min-w-0 flex-1">
+              <div className="flex items-center flex-1">
                 <span className="text-xs font-medium text-gray-700 uppercase tracking-wider truncate mr-1.5 column-name">
                   {column}
                 </span>
-                <span className="text-xs px-1 py-0.5 bg-gray-200 text-gray-600 rounded font-mono opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                <span className="text-xs py-0.5 bg-gray-200 text-gray-600 rounded font-mono opacity-60 group-hover:opacity-100 transition-opacity">
                   {getTypeAbbreviation(dataType)}
                 </span>
               </div>
@@ -135,17 +135,17 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
               {onAnalyze && (
                 <button
                   onClick={handleAnalyze}
-                  className="p-0.5 rounded hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-colors cursor-pointer"
+                  className="rounded hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-colors cursor-pointer"
                   title="Analyze this column"
                   onMouseDown={(e) => e.stopPropagation()}
                 >
-                  <BarChart3 className="w-3 h-3" />
+                  <BarChart3 className="w-2 h-2" />
                 </button>
               )}
             </div>
             
             {/* Status indicators */}
-            <div className="flex items-center space-x-0.5">
+            <div className="flex items-center">
               {hasFilter && (
                 <span className="text-xs px-0.5 py-0.5 bg-blue-100 text-blue-700 rounded font-medium" title="Filtered">
                   F

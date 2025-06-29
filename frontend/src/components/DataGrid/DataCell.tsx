@@ -128,11 +128,11 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
           ) : (
             <div 
               style={{ 
-                width: `${width - 4}px`, // padding 2px * 2 = 4px 제외
-                maxWidth: `${width - 4}px`,
-                minWidth: `${width - 4}px`,
+                width: `${width}px`, // padding 2px * 2 = 4px 제외
+                maxWidth: `${width}px`,
+                minWidth: `${width}px`,
                 minHeight: '20px',
-                padding: '2px',
+                padding: '0px',
                 boxSizing: 'border-box',
                 overflow: 'hidden'
               }}
@@ -157,7 +157,7 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
               className="absolute top-1 right-1 p-0.5 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
               title="View full content"
             >
-              <Eye className="w-3 h-3" />
+              <Eye className="w-2 h-2" />
             </button>
           )}
         </div>
