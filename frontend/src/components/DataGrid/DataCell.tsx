@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Eye, Copy, ExternalLink } from 'lucide-react'
 
 interface DataCellProps {
@@ -6,10 +7,30 @@ interface DataCellProps {
   column: string
   rowIndex: number
   maxWidth?: number
+  width?: number
 }
 
-const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth = 200 }) => {
+const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth = 200, width = 200 }) => {
   const [showModal, setShowModal] = useState(false)
+
+  // ESC 키로 모달 닫기
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showModal) {
+        setShowModal(false)
+      }
+    }
+
+    if (showModal) {
+      document.addEventListener('keydown', handleKeyDown)
+      // body 스크롤 방지 제거 - 테이블 레이아웃 변경 방지
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      // body 스크롤 복원 제거
+    }
+  }, [showModal])
 
   const formatValue = (val: any): string => {
     if (val === null || val === undefined) return ''
@@ -26,6 +47,13 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
     ? displayValue.substring(0, 100) + '...' 
     : displayValue
 
+  const handleCellClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    console.log('Cell clicked:', rowIndex, column) // 디버깅용
+    setShowModal(true)
+  }
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(displayValue)
@@ -36,35 +64,97 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
 
   return (
     <>
-      <td className="px-3 py-2 text-sm text-gray-900 border-b border-gray-200 group relative">
-        <div className="flex items-center space-x-2">
-          <div 
-            className="flex-1 overflow-hidden"
-            style={{ maxWidth: `${maxWidth}px` }}
-          >
-            {displayValue ? (
-              <div className="whitespace-pre-wrap break-words text-xs leading-relaxed">
-                {isLongContent ? (
-                  <span 
-                    className="cursor-pointer hover:bg-yellow-50 p-1 rounded"
-                    onClick={() => setShowModal(true)}
-                    title="Click to view full content"
-                  >
-                    {truncatedValue}
-                  </span>
-                ) : (
-                  displayValue
-                )}
-              </div>
-            ) : (
-              <span className="text-gray-400 italic text-xs">null</span>
-            )}
-          </div>
+      <td 
+        className="px-0 py-1 text-sm text-gray-900 border-b border-gray-200 group relative"
+        style={{ 
+          width: `${width}px`,
+          maxWidth: `${width}px`,
+          minWidth: `${width}px`,
+          boxSizing: 'border-box'
+        }}
+      >
+        <div 
+          className="w-full h-full"
+          style={{
+            width: `${width}px`,
+            maxWidth: `${width}px`,
+            minWidth: `${width}px`,
+            boxSizing: 'border-box',
+            overflow: 'hidden'
+          }}
+        >
+          {displayValue ? (
+            <div 
+              className="text-xs leading-relaxed"
+              style={{ 
+                minHeight: '20px', 
+                width: `${width - 4}px`, // padding 2px * 2 = 4px 제외
+                maxWidth: `${width - 4}px`,
+                minWidth: `${width - 4}px`,
+                wordBreak: 'break-all',
+                padding: '2px',
+                boxSizing: 'border-box',
+                overflow: 'hidden'
+              }}
+            >
+              {isLongContent ? (
+                <span 
+                  className="cursor-pointer hover:bg-yellow-50 rounded block"
+                  onClick={handleCellClick}
+                  title="Click to view full content"
+                  style={{ 
+                    width: '100%',
+                    display: 'block',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {truncatedValue}
+                </span>
+              ) : (
+                <span 
+                  className="cursor-pointer hover:bg-yellow-50 rounded block"
+                  onClick={handleCellClick}
+                  title="Click to view content"
+                  style={{ 
+                    width: '100%',
+                    display: 'block',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {displayValue}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div 
+              style={{ 
+                width: `${width - 4}px`, // padding 2px * 2 = 4px 제외
+                maxWidth: `${width - 4}px`,
+                minWidth: `${width - 4}px`,
+                minHeight: '20px',
+                padding: '2px',
+                boxSizing: 'border-box',
+                overflow: 'hidden'
+              }}
+            >
+              <span 
+                className="text-gray-400 italic text-xs block cursor-pointer hover:bg-yellow-50 rounded"
+                onClick={handleCellClick}
+                title="Click to view content"
+                style={{
+                  width: '100%',
+                  overflow: 'hidden'
+                }}
+              >
+                null
+              </span>
+            </div>
+          )}
           
           {(isLongContent || isComplexObject) && (
             <button
-              onClick={() => setShowModal(true)}
-              className="p-1 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+              onClick={handleCellClick}
+              className="absolute top-1 right-1 p-0.5 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
               title="View full content"
             >
               <Eye className="w-3 h-3" />
@@ -73,10 +163,21 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
         </div>
       </td>
 
-      {/* Enhanced Detail Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-6xl max-h-[90vh] w-full m-4 flex flex-col">
+      {/* Enhanced Detail Modal - Portal을 사용해서 body에 렌더링 */}
+      {showModal && createPortal(
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={(e) => {
+            // 배경 클릭시 모달 닫기 (모달 내용 클릭은 제외)
+            if (e.target === e.currentTarget) {
+              setShowModal(false)
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg max-w-6xl max-h-[90vh] w-full m-4 flex flex-col"
+            onClick={(e) => e.stopPropagation()} // 모달 내용 클릭시 이벤트 버블링 방지
+          >
             <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
               <div>
                 <h3 className="text-lg font-medium text-gray-900">
@@ -148,7 +249,8 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

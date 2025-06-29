@@ -13,6 +13,7 @@ interface ColumnHeaderProps {
   onFilter: (column: string, rule: FilterRule | null) => void
   onAnalyze?: (column: string) => void
   onColumnSearch?: (column: string, query: string) => void
+  width?: number
 }
 
 const ColumnHeader: React.FC<ColumnHeaderProps> = ({
@@ -24,7 +25,8 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   onSort,
   onFilter,
   onAnalyze,
-  onColumnSearch
+  onColumnSearch,
+  width
 }) => {
   const [showColumnSearch, setShowColumnSearch] = useState(false)
   const [columnSearchQuery, setColumnSearchQuery] = useState('')
@@ -58,93 +60,131 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
     </div>
   }
 
+  const getTypeAbbreviation = (type: string) => {
+    const typeMap: { [key: string]: string } = {
+      'string': 'STR',
+      'text': 'TXT', 
+      'integer': 'INT',
+      'number': 'NUM',
+      'float': 'FLT',
+      'boolean': 'BOL',
+      'object': 'OBJ',
+      'array': 'ARR',
+      'date': 'DAT',
+      'datetime': 'DTM'
+    }
+    return typeMap[type.toLowerCase()] || type.slice(0, 3).toUpperCase()
+  }
+
   return (
-    <th className="bg-gray-50 border-b border-gray-200 relative">
-      <div className="p-3 space-y-2">
-        {/* Column Name and Sort */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={handleSort}
-            className="flex items-center space-x-2 text-left hover:text-blue-600 flex-1 min-w-0"
-            title="Click to sort"
-          >
-            <span className="text-xs font-medium text-gray-700 uppercase tracking-wider truncate">
-              {column}
-            </span>
-            {getSortIcon()}
-          </button>
-        </div>
-
-        {/* Data Type */}
-        <div className="text-xs text-gray-500 mb-2">
-          {dataType}
-        </div>
-
-        {/* Action Buttons - Always Visible */}
-        <div className="flex items-center space-x-1">
-          <FilterDropdown
-            column={column}
-            values={sampleValues}
-            onFilter={handleFilter}
-            isActive={hasFilter}
-          />
-          
-          <button
-            onClick={() => setShowColumnSearch(!showColumnSearch)}
-            className={`p-1 rounded hover:bg-gray-100 ${showColumnSearch ? 'text-blue-600 bg-blue-50' : 'text-gray-500'}`}
-            title="Search in this column"
-          >
-            <Search className="w-4 h-4" />
-          </button>
-          
-          {onAnalyze && (
+    <div 
+      className="px-0.5 py-1 h-full"
+      style={{ 
+        width: `${width || 192}px`, 
+        minWidth: `${width || 192}px`
+      }}
+    >
+        {/* Header content - 완전히 독립적인 영역 */}
+        <div className="relative">
+          {/* Top row: Column name, type, sort */}
+          <div className="flex items-center justify-between mb-1">
             <button
-              onClick={handleAnalyze}
-              className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-blue-600"
-              title="Analyze this column"
+              onClick={handleSort}
+              className="flex items-center text-left hover:text-blue-600 min-w-0 group cursor-pointer flex-1 w-full"
+              title={`Click to sort ${column} (${dataType})`}
+              style={{ 
+                cursor: 'pointer !important'
+              }}
             >
-              <BarChart3 className="w-4 h-4" />
+              <span className="text-xs font-medium text-gray-700 uppercase tracking-wider flex-1 mr-1 column-name">
+                {column}
+              </span>
+              <div className="flex items-center space-x-0.5 flex-shrink-0">
+                <span className="text-xs px-1 py-0.5 bg-gray-200 text-gray-600 rounded font-mono opacity-60 group-hover:opacity-100 transition-opacity">
+                  {getTypeAbbreviation(dataType)}
+                </span>
+                {getSortIcon()}
+              </div>
             </button>
-          )}
+          </div>
+          
+          {/* Bottom row: Action buttons and status */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-0.5">
+              <FilterDropdown
+                column={column}
+                values={sampleValues}
+                onFilter={handleFilter}
+                isActive={hasFilter}
+              />
+              
+              <button
+                onClick={() => setShowColumnSearch(!showColumnSearch)}
+                className={`p-0.5 rounded hover:bg-gray-100 transition-colors cursor-pointer ${showColumnSearch ? 'text-blue-600 bg-blue-50' : 'text-gray-500'}`}
+                title="Search in this column"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <Search className="w-3 h-3" />
+              </button>
+              
+              {onAnalyze && (
+                <button
+                  onClick={handleAnalyze}
+                  className="p-0.5 rounded hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-colors cursor-pointer"
+                  title="Analyze this column"
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <BarChart3 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            
+            {/* Status indicators */}
+            <div className="flex items-center space-x-0.5">
+              {hasFilter && (
+                <span className="text-xs px-0.5 py-0.5 bg-blue-100 text-blue-700 rounded font-medium" title="Filtered">
+                  F
+                </span>
+              )}
+              {sortOrder && (
+                <span className="text-xs px-0.5 py-0.5 bg-green-100 text-green-700 rounded font-medium" title={`Sorted ${sortOrder === SortOrder.ASC ? 'Ascending' : 'Descending'}`}>
+                  {sortOrder === SortOrder.ASC ? '↑' : '↓'}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Column Search Input */}
         {showColumnSearch && (
-          <form onSubmit={handleColumnSearch} className="mt-2">
-            <div className="relative">
-              <input
-                type="text"
-                value={columnSearchQuery}
-                onChange={(e) => setColumnSearchQuery(e.target.value)}
-                placeholder={`Search in ${column}...`}
-                className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                autoFocus
-              />
-              <button
-                type="submit"
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 p-0.5 text-gray-400 hover:text-blue-600"
-              >
-                <Search className="w-3 h-3" />
-              </button>
-            </div>
-          </form>
+          <div className="mt-2 relative">
+            <form onSubmit={handleColumnSearch}>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={columnSearchQuery}
+                  onChange={(e) => setColumnSearchQuery(e.target.value)}
+                  placeholder={`Search in ${column}...`}
+                  className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  autoFocus
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <button
+                  type="submit"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 p-0.5 text-gray-400 hover:text-blue-600"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  style={{
+                    cursor: 'pointer !important'
+                  }}
+                >
+                  <Search className="w-3 h-3" />
+                </button>
+              </div>
+            </form>
+          </div>
         )}
-
-        {/* Active Indicators */}
-        <div className="flex items-center space-x-1">
-          {hasFilter && (
-            <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
-              Filtered
-            </span>
-          )}
-          {sortOrder && (
-            <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">
-              Sorted {sortOrder === SortOrder.ASC ? '↑' : '↓'}
-            </span>
-          )}
-        </div>
-      </div>
-    </th>
+    </div>
   )
 }
 

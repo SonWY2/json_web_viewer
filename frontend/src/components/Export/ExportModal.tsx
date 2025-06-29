@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Download, X, FileText, Table, FileSpreadsheet } from 'lucide-react'
 import { apiService } from '../../services/api'
 import { DataRequest } from '../../types'
@@ -21,6 +21,25 @@ const ExportModal: React.FC<ExportModalProps> = ({
   const [format, setFormat] = useState('json')
   const [includeStats, setIncludeStats] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+
+  // ESC 키로 모달 닫기
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen && !isExporting) {
+        onClose()
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown)
+      // body 스크롤 방지 제거 - 테이블 레이아웃 변경 방지
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      // body 스크롤 복원 제거
+    }
+  }, [isOpen, isExporting, onClose])
 
   if (!isOpen) return null
 
@@ -66,8 +85,19 @@ const ExportModal: React.FC<ExportModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg max-w-md w-full m-4">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      onClick={(e) => {
+        // 배경 클릭시 모달 닫기 (내보내기 중이 아닐 때만)
+        if (e.target === e.currentTarget && !isExporting) {
+          onClose()
+        }
+      }}
+    >
+      <div 
+        className="bg-white rounded-lg max-w-md w-full m-4"
+        onClick={(e) => e.stopPropagation()} // 모달 내용 클릭시 이벤트 버블링 방지
+      >
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">Export Data</h2>
           <button

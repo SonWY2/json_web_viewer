@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { Settings, Eye, EyeOff, Move, ChevronDown } from 'lucide-react'
+import { Settings, Eye, EyeOff, Move, ChevronDown, Ruler } from 'lucide-react'
 import { ColumnInfo } from '../../types'
+import { useDataStore } from '../../stores/dataStore'
 
 interface ColumnSelectorProps {
   columns: ColumnInfo[]
@@ -9,6 +10,7 @@ interface ColumnSelectorProps {
   onOrderChange: (columnNames: string[]) => void
   onSelectAll: () => void
   onSelectNone: () => void
+  onResetWidths?: () => void
 }
 
 const ColumnSelector: React.FC<ColumnSelectorProps> = ({
@@ -17,10 +19,12 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
   onVisibilityChange,
   onOrderChange,
   onSelectAll,
-  onSelectNone
+  onSelectNone,
+  onResetWidths
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
+  const { columnWidths } = useDataStore()
 
   const handleDragStart = (e: React.DragEvent, columnName: string) => {
     setDraggedItem(columnName)
@@ -81,7 +85,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
                 ×
               </button>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={onSelectAll}
                 className="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
@@ -94,6 +98,15 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
               >
                 Hide All
               </button>
+              {onResetWidths && (
+                <button
+                  onClick={onResetWidths}
+                  className="px-2 py-1 text-xs bg-green-50 text-green-600 rounded hover:bg-green-100"
+                  title="Reset all column widths to default"
+                >
+                  Reset Widths
+                </button>
+              )}
             </div>
           </div>
 
@@ -101,6 +114,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
           <div className="max-h-96 overflow-y-auto">
             {columns.map((column, index) => {
             const isVisible = visibleColumns.includes(column.name)
+            const currentWidth = columnWidths[column.name] || 200
             
             return (
             <div
@@ -123,15 +137,21 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
             <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-2">
-            {isVisible ? (
-            <Eye className="w-4 h-4 text-green-500" />
-            ) : (
-            <EyeOff className="w-4 h-4 text-gray-400" />
-            )}
-            <span className="text-sm font-medium text-gray-900 truncate">
-            {column.name}
-            </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                {isVisible ? (
+                <Eye className="w-4 h-4 text-green-500" />
+                ) : (
+                <EyeOff className="w-4 h-4 text-gray-400" />
+                )}
+                <span className="text-sm font-medium text-gray-900 truncate">
+                {column.name}
+                </span>
+              </div>
+              <div className="flex items-center space-x-1 text-xs text-gray-500">
+                <Ruler className="w-3 h-3" />
+                <span>{currentWidth}px</span>
+              </div>
             </div>
             <div className="text-xs text-gray-500">
             {column.data_type} • {column.sample_values?.length || 0} samples

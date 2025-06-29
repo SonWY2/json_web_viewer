@@ -31,6 +31,7 @@ interface DataStore {
   setVisibleColumns: (columnIds: string[]) => void
   setColumnOrder: (columnIds: string[]) => void
   setColumnWidth: (columnId: string, width: number) => void  // Added
+  resetColumnWidths: () => void  // Added
   toggleColumnVisibility: (columnId: string) => void
   showAllColumns: () => void
   hideAllColumns: () => void
@@ -67,6 +68,12 @@ export const useDataStore = create<DataStore>((set, get) => ({
             !columnIds.every(id => state.columnOrder.includes(id))) {
           newState.visibleColumns = columnIds
           newState.columnOrder = columnIds
+          
+          // Initialize default column widths
+          const defaultWidths = Object.fromEntries(
+            columnIds.map(id => [id, state.columnWidths[id] || 80])
+          )
+          newState.columnWidths = { ...defaultWidths, ...state.columnWidths }
         }
       }
       
@@ -99,8 +106,18 @@ export const useDataStore = create<DataStore>((set, get) => ({
   setColumnOrder: (columnIds) => set({ columnOrder: columnIds }),
   
   setColumnWidth: (columnId, width) => set((state) => ({
-    columnWidths: { ...state.columnWidths, [columnId]: Math.max(100, Math.min(500, width)) }
+    columnWidths: { ...state.columnWidths, [columnId]: Math.max(40, Math.min(250, width)) }
   })),
+  
+  resetColumnWidths: () => set((state) => {
+    if (state.currentData?.schema) {
+      const defaultWidths = Object.fromEntries(
+        state.currentData.schema.map(col => [col.name, 80])
+      )
+      return { columnWidths: defaultWidths }
+    }
+    return { columnWidths: {} }
+  }),
   
   toggleColumnVisibility: (columnId) => set((state) => {
     const isVisible = state.visibleColumns.includes(columnId)
@@ -119,12 +136,12 @@ export const useDataStore = create<DataStore>((set, get) => ({
     if (state.currentData?.schema) {
       const allColumnIds = state.currentData.schema.map(col => col.name)
       const defaultWidths = Object.fromEntries(
-        allColumnIds.map(id => [id, state.columnWidths[id] || 200])
+        allColumnIds.map(id => [id, state.columnWidths[id] || 80])
       )
       return { 
         visibleColumns: [...allColumnIds],
         columnOrder: state.columnOrder.length === 0 ? [...allColumnIds] : state.columnOrder,
-        columnWidths: { ...state.columnWidths, ...defaultWidths }
+        columnWidths: { ...defaultWidths, ...state.columnWidths }
       }
     }
     return {}

@@ -3,10 +3,11 @@ import { useFileStore } from '../../stores/fileStore'
 import { useAnalysisStore } from '../../stores/analysisStore'
 import { useDataStore } from '../../stores/dataStore'
 import { apiService } from '../../services/api'
-import { DataRequest, DataChunk, SortOrder, FilterRule, FilterRequest, FilterGroup, LogicalOperator, SearchResponse, FilterOperator } from '../../types' // FilterOperator 추가
+import { DataRequest, DataChunk, SortOrder, FilterRule, FilterRequest, FilterGroup, LogicalOperator, SearchResponse, FilterOperator } from '../../types'
 import ColumnHeader from './ColumnHeader'
 import DataCell from './DataCell'
 import ColumnSelector from './ColumnSelector'
+import ResizeHandle from './ResizeHandle'
 import { ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
 
 interface DataGridRef {
@@ -19,11 +20,14 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
   const {
     visibleColumns,
     columnOrder,
+    columnWidths,
     setVisibleColumns,
     setColumnOrder,
+    setColumnWidth,
     toggleColumnVisibility,
     showAllColumns,
     hideAllColumns,
+    resetColumnWidths,
     getOrderedVisibleColumns,
     setCurrentData
   } = useDataStore()
@@ -49,6 +53,33 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     return currentFile.columns.filter(col => orderedVisible.includes(col.name))
   }
 
+  // 초기 컬럼 너비를 브라우저 너비에 맞춰 계산
+  const calculateInitialColumnWidths = () => {
+    if (!currentFile) return
+    
+    const visibleCols = getVisibleColumnsInOrder()
+    if (visibleCols.length === 0) return
+    
+    // 이미 너비가 설정된 컬럼이 있다면 건드리지 않음
+    const hasExistingWidths = visibleCols.some(col => columnWidths[col.name])
+    if (hasExistingWidths) return
+    
+    // 브라우저 너비에서 스크롤바와 패딩을 뺀 사용 가능한 너비
+    const availableWidth = window.innerWidth - 100
+    const columnCount = visibleCols.length
+    
+    // 각 컬럼의 초기 너비 계산 (최소 80px, 최대 250px)
+    const idealWidth = Math.floor(availableWidth / columnCount)
+    const columnWidth = Math.max(80, Math.min(250, idealWidth))
+    
+    // 모든 컬럼에 동일한 너비 적용
+    visibleCols.forEach(col => {
+      if (!columnWidths[col.name]) { // 기존 너비가 없는 경우만
+        setColumnWidth(col.name, columnWidth)
+      }
+    })
+  }
+
   useEffect(() => {
     if (currentFile) {
       const mockDataChunk = {
@@ -62,14 +93,15 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
         schema: currentFile.columns
       }
       setCurrentData(mockDataChunk)
+      
+      // 초기 컬럼 너비 계산 및 적용
+      setTimeout(() => calculateInitialColumnWidths(), 100)
     }
   }, [currentFile, setCurrentData])
 
   useImperativeHandle(ref, () => ({
     handleGlobalSearchResults: (results: SearchResponse | null) => {
       setSearchResults(results)
-      // 전역 검색 결과는 여전히 프론트엔드에서 하이라이팅을 위해 사용될 수 있습니다.
-      // 하지만 데이터 로딩은 useEffect가 처리하도록 페이지를 1로 리셋합니다.
       loadData(1) 
     }
   }))
@@ -80,9 +112,6 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     }
   }, [currentFile])
 
-  // ==================================================================
-  // 여기가 핵심 수정 부분입니다.
-  // ==================================================================
   const loadData = async (page?: number) => {
     if (!currentFile) return
 
@@ -91,21 +120,17 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     setError(null)
 
     try {
-      // 1. 기존 필터와 컬럼 검색(Column Searches)을 통합합니다.
       const baseFilterRules = Array.from(filters.values());
       const searchFilterRules: FilterRule[] = Array.from(columnSearches.entries())
         .filter(([_, query]) => query.trim())
         .map(([column, query]) => ({
           column: column,
-          // 중요: 'contains'는 백엔드 API에서 지원하는 텍스트 검색 연산자여야 합니다.
-          // 실제 연산자 이름(예: FilterOperator.CONTAINS)으로 변경해야 할 수 있습니다.
           operator: 'contains' as FilterOperator, 
           value: query.trim()
         }));
 
       const allRules = [...baseFilterRules, ...searchFilterRules];
 
-      // 2. 통합된 규칙으로 새로운 필터 요청 객체를 생성합니다.
       const filterRequest: FilterRequest | undefined = allRules.length > 0 ? {
         groups: [
           {
@@ -115,47 +140,25 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
         ],
         global_operator: LogicalOperator.AND
       } : undefined
-      
-      // 전역 검색 결과를 필터 조건으로 추가 (백엔드 지원이 필요할 수 있음)
-      // 만약 전역 검색 결과(row indices)도 필터링 조건으로 보내야 한다면,
-      // 아래와 같이 추가적인 필터 그룹을 생성할 수 있습니다.
-      // 이 로직은 백엔드 API의 설계에 따라 달라집니다.
-      if (searchResults && searchResults.matching_rows.length > 0) {
-          if (!filterRequest) {
-              // filterRequest가 없는 경우 새로 생성
-          }
-          // 여기에 `searchResults.matching_rows`를 사용하는 필터 규칙 추가
-          // 예: { column: '__ROW_ID__', operator: 'in', value: searchResults.matching_rows }
-          // 이 부분은 백엔드와의 협의가 필요하여 일단 비워둡니다.
-      }
 
-      // 3. 서버에 올바른 필터 조건이 포함된 데이터 요청을 보냅니다.
       const request: DataRequest = {
         file_id: currentFile.id,
         page: targetPage,
         page_size: pageSize,
         sort: sortRules,
-        filters: filterRequest // 통합된 필터 사용
+        filters: filterRequest
       }
 
       const result = await apiService.getData(request)
 
-      // 4. 프론트엔드에서 수동으로 필터링 하던 로직을 제거합니다.
-      // 서버가 이미 필터링된 결과를 올바른 페이지 정보와 함께 보내줍니다.
       setData(result)
       setCurrentData(result)
       setCurrentPage(result.page)
 
-      // 하이라이팅 로직은 여전히 필요할 수 있습니다.
       if (searchResults && searchResults.matching_rows.length > 0) {
         const pageStartIndex = (result.page - 1) * pageSize
         const pageEndIndex = pageStartIndex + pageSize
         const highlightedInPage = new Set<number>()
-        searchResults.matching_rows.forEach(globalRowIndex => {
-          // 서버에서 받은 데이터 내에서 로컬 인덱스를 찾아야 합니다.
-          // 이 부분은 백엔드에서 받은 데이터에 원래 행 번호가 포함되어 있는지에 따라 달라집니다.
-          // 여기서는 간단히 비워둡니다.
-        })
         setHighlightRows(highlightedInPage)
       } else {
         setHighlightRows(new Set())
@@ -169,16 +172,11 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     }
   }
 
-  // 더 이상 필요하지 않으므로 이 함수는 제거하거나 주석 처리합니다.
-  /*
-  const getFilteredRowIndices = async (): Promise<number[] | null> => { ... }
-  */
-
   useEffect(() => {
     if (currentFile) {
       loadData(1)
     }
-  }, [sortRules, filters, columnSearches, searchResults, pageSize]) // searchResults도 의존성에 추가
+  }, [sortRules, filters, columnSearches, searchResults, pageSize])
 
   const handleSort = (column: string, order: SortOrder) => {
     setSortRules([{ column, order }])
@@ -293,6 +291,7 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
                 onOrderChange={setColumnOrder}
                 onSelectAll={showAllColumns}
                 onSelectNone={hideAllColumns}
+                onResetWidths={resetColumnWidths}
               />
             )}
             {data && data.total_records > 0 && (
@@ -370,22 +369,50 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
             <span className="ml-2 text-gray-600">Loading data...</span>
           </div>
         ) : data && data.data.length > 0 ? (
-          <table className="w-full table-fixed">
+          <table className="data-grid-table">
             <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
               <tr>
-                {getVisibleColumnsInOrder().map((column) => (
-                  <ColumnHeader
+                {getVisibleColumnsInOrder().map((column, index) => (
+                  <th
                     key={column.name}
-                    column={column.name}
-                    dataType={column.data_type}
-                    sampleValues={column.sample_values}
-                    sortOrder={sortRules.find(r => r.column === column.name)?.order}
-                    hasFilter={filters.has(column.name)}
-                    onSort={handleSort}
-                    onFilter={handleFilter}
-                    onAnalyze={handleAnalyze}
-                    onColumnSearch={handleColumnSearch}
-                  />
+                    className="bg-gray-50 border-b border-gray-200"
+                    style={{ 
+                      width: `${columnWidths[column.name] || 200}px`,
+                      maxWidth: `${columnWidths[column.name] || 200}px`,
+                      minWidth: `${columnWidths[column.name] || 200}px`,
+                      padding: 0
+                    }}
+                  >
+                    {/* Flex 컨테이너로 헤더 콘텐츠와 리사이즈 핸들 분리 */}
+                    <div className="flex h-full">
+                      {/* 헤더 콘텐츠 영역 */}
+                      <div className="flex-1" style={{ width: `${(columnWidths[column.name] || 200) - 8}px` }}>
+                        <ColumnHeader
+                          column={column.name}
+                          dataType={column.data_type}
+                          sampleValues={column.sample_values}
+                          sortOrder={sortRules.find(r => r.column === column.name)?.order}
+                          hasFilter={filters.has(column.name)}
+                          onSort={handleSort}
+                          onFilter={handleFilter}
+                          onAnalyze={handleAnalyze}
+                          onColumnSearch={handleColumnSearch}
+                          width={(columnWidths[column.name] || 200) - 8}
+                        />
+                      </div>
+                      
+                      {/* 리사이즈 핸들 영역 */}
+                      <div style={{ width: '8px', flexShrink: 0 }}>
+                        <ResizeHandle
+                          column={column.name}
+                          width={columnWidths[column.name] || 200}
+                          onWidthChange={(newWidth) => {
+                            console.log(`📝 Column ${column.name} resized to ${newWidth}px`)
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -403,7 +430,8 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
                       value={row[column.name]}
                       column={column.name}
                       rowIndex={(currentPage - 1) * pageSize + rowIndex}
-                      maxWidth={300}
+                      maxWidth={columnWidths[column.name] || 200}
+                      width={columnWidths[column.name] || 200}
                     />
                   ))}
                 </tr>
