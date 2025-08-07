@@ -1,17 +1,31 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Eye, Copy, ExternalLink } from 'lucide-react'
+import { Eye, Copy, MessageSquare } from 'lucide-react'
+import ChatView from '../Chat/ChatView'
+
+// Helper to check for ChatML format
+const isChatML = (content: any): content is string => {
+  return typeof content === 'string' && content.includes('<|im_start|>') && content.includes('<|im_end|>');
+};
 
 interface DataCellProps {
   value: any
   column: string
   rowIndex: number
-  maxWidth?: number
-  width?: number
 }
 
-const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth = 200, width = 200 }) => {
+const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex }) => {
   const [showModal, setShowModal] = useState(false)
+  const [viewMode, setViewMode] = useState<'raw' | 'chat'>('raw')
+
+  const isChatContent = isChatML(value);
+
+  useEffect(() => {
+    if (showModal) {
+      setViewMode(isChatContent ? 'chat' : 'raw');
+    }
+  }, [showModal, isChatContent]);
+
 
   // ESC 키로 모달 닫기
   useEffect(() => {
@@ -169,29 +183,54 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex, maxWidth =
               </div>
             </div>
             
-            <div className="flex-1 overflow-auto p-4">
-              {isComplexObject ? (
-                <pre className="bg-gray-50 p-4 rounded text-sm overflow-auto font-mono">
-                  {displayValue}
-                </pre>
+            <div className="p-2 border-b border-gray-200">
+              {isChatContent && (
+                <div className="flex space-x-1">
+                  <button
+                    onClick={() => setViewMode('chat')}
+                    className={`px-3 py-1 text-sm rounded-md ${viewMode === 'chat' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2 inline-block" />
+                    Chat View
+                  </button>
+                  <button
+                    onClick={() => setViewMode('raw')}
+                    className={`px-3 py-1 text-sm rounded-md ${viewMode === 'raw' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}
+                  >
+                    Raw Text
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-auto">
+              {viewMode === 'chat' && isChatContent ? (
+                <ChatView content={value} />
               ) : (
-                <div className="prose max-w-none">
-                  {/* Check if it looks like markdown */}
-                  {displayValue.includes('#') || displayValue.includes('```') ? (
-                    <div className="space-y-4">
-                      <div className="bg-blue-50 p-3 rounded-lg">
-                        <p className="text-sm text-blue-800">
-                          This content appears to contain Markdown formatting.
-                        </p>
-                      </div>
-                      <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded border">
-                        {displayValue}
-                      </pre>
-                    </div>
-                  ) : (
-                    <pre className="whitespace-pre-wrap text-sm leading-relaxed">
+                <div className="p-4">
+                  {isComplexObject ? (
+                    <pre className="bg-gray-50 p-4 rounded text-sm overflow-auto font-mono">
                       {displayValue}
                     </pre>
+                  ) : (
+                    <div className="prose max-w-none">
+                      {displayValue.includes('#') || displayValue.includes('```') ? (
+                        <div className="space-y-4">
+                          <div className="bg-blue-50 p-3 rounded-lg">
+                            <p className="text-sm text-blue-800">
+                              This content may contain Markdown.
+                            </p>
+                          </div>
+                          <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded border">
+                            {displayValue}
+                          </pre>
+                        </div>
+                      ) : (
+                        <pre className="whitespace-pre-wrap text-sm leading-relaxed">
+                          {displayValue}
+                        </pre>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

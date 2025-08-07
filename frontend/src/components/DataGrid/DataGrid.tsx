@@ -458,7 +458,6 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
                       value={row[column.name]}
                       column={column.name}
                       rowIndex={(currentPage - 1) * pageSize + rowIndex}
-                      width={columnWidths[column.name] || 150}
                     />
                   ))}
                 </tr>
