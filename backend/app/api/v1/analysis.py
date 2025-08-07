@@ -42,6 +42,18 @@ async def get_column_analysis(file_id: str, column: str):
         )
     return result
 
+@router.get("/dataset-overview/{file_id}")
+async def get_dataset_overview(file_id: str):
+    """Get comprehensive dataset overview"""
+    try:
+        overview = analysis_service.get_dataset_overview(file_id)
+        return overview
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Dataset overview failed: {str(e)}"
+        )
+
 @router.post("/quality")
 async def analyze_data_quality(request: QualityAnalysisRequest):
     """Start data quality analysis"""

@@ -140,6 +140,14 @@ class ApiService {
     return response.json()
   }
 
+  async getDatasetOverview(fileId: string): Promise<any> {
+    const response = await fetch(`${API_BASE}/analysis/dataset-overview/${fileId}`)
+    if (!response.ok) {
+      throw new Error(`Failed to get dataset overview: ${response.statusText}`)
+    }
+    return response.json()
+  }
+
   // Task operations
   async getTaskStatus(taskId: string): Promise<TaskInfo> {
     const response = await fetch(`${API_BASE}/tasks/${taskId}`)

@@ -237,6 +237,104 @@ class AnalysisService:
         cache_key = f"{file_id}_{column}"
         return self.analysis_cache.get(cache_key)
     
+    def get_dataset_overview(self, file_id: str) -> Dict[str, Any]:
+        """Generate comprehensive dataset overview"""
+        metadata = file_loader_service.get_file_metadata(file_id)
+        if not metadata:
+            raise ValueError(f"File not found: {file_id}")
+        
+        streamer = JSONLStreamer(metadata.file_path)
+        
+        # Initialize counters
+        total_records = 0
+        total_cells = 0
+        null_cells = 0
+        empty_rows = 0
+        column_stats = {col.name: {
+            'name': col.name,
+            'data_type': col.data_type.value,
+            'null_count': 0,
+            'unique_values': set(),
+            'value_counts': Counter(),
+            'sample_values': []
+        } for col in metadata.columns}
+        
+        # Process records
+        for record in streamer.stream_records():
+            total_records += 1
+            row_null_count = 0
+            
+            for col_name in column_stats.keys():
+                total_cells += 1
+                value = record.get(col_name)
+                
+                if value is None or value == '':
+                    column_stats[col_name]['null_count'] += 1
+                    null_cells += 1
+                    row_null_count += 1
+                else:
+                    # Track unique values (limited to avoid memory issues)
+                    if len(column_stats[col_name]['unique_values']) < 10000:
+                        column_stats[col_name]['unique_values'].add(str(value))
+                    
+                    # Track value frequency (top 100)
+                    column_stats[col_name]['value_counts'][str(value)] += 1
+                    if len(column_stats[col_name]['value_counts']) > 100:
+                        # Keep only top values
+                        top_values = dict(column_stats[col_name]['value_counts'].most_common(50))
+                        column_stats[col_name]['value_counts'] = Counter(top_values)
+                    
+                    # Sample values
+                    if len(column_stats[col_name]['sample_values']) < 5:
+                        column_stats[col_name]['sample_values'].append(str(value))
+            
+            # Check for empty rows
+            if row_null_count == len(column_stats):
+                empty_rows += 1
+        
+        # Calculate statistics
+        processed_column_stats = []
+        for col_name, stats in column_stats.items():
+            null_ratio = stats['null_count'] / total_records if total_records > 0 else 0
+            unique_count = len(stats['unique_values'])
+            top_values = [{'value': k, 'count': v} for k, v in stats['value_counts'].most_common(5)]
+            
+            processed_column_stats.append({
+                'name': col_name,
+                'data_type': stats['data_type'],
+                'null_count': stats['null_count'],
+                'null_ratio': null_ratio,
+                'unique_count': unique_count,
+                'top_values': top_values
+            })
+        
+        # Data quality metrics
+        total_null_ratio = null_cells / total_cells if total_cells > 0 else 0
+        empty_columns = sum(1 for stats in column_stats.values() if stats['null_count'] == total_records)
+        completeness_score = 1.0 - total_null_ratio
+        
+        # Type distribution
+        type_distribution = {}
+        for col in metadata.columns:
+            data_type = col.data_type.value
+            type_distribution[data_type] = type_distribution.get(data_type, 0) + 1
+        
+        return {
+            'basic_info': {
+                'total_records': total_records,
+                'total_columns': len(metadata.columns),
+                'file_size': metadata.file_size
+            },
+            'data_quality': {
+                'total_null_ratio': total_null_ratio,
+                'empty_rows': empty_rows,
+                'empty_columns': empty_columns,
+                'completeness_score': completeness_score
+            },
+            'column_stats': processed_column_stats,
+            'type_distribution': type_distribution
+        }
+
     def analyze_data_quality(self, file_id: str) -> str:
         """Analyze overall data quality"""
         task_id = task_manager.submit_task(

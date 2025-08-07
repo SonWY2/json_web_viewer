@@ -7,6 +7,7 @@ import FileExplorer from './components/FileExplorer/FileExplorer'
 import ExportModal from './components/Export/ExportModal'
 import AnalysisProgress from './components/Analysis/AnalysisProgress'
 import AnalysisResults from './components/Analysis/AnalysisResults'
+import DatasetOverviewModal from './components/Analysis/DatasetOverviewModal'
 import { useFileStore } from './stores/fileStore'
 import { useDataStore } from './stores/dataStore'
 import { useAnalysisStore } from './stores/analysisStore'
@@ -27,6 +28,7 @@ function App() {
   } = useAnalysisStore()
   
   const [showExportModal, setShowExportModal] = useState(false)
+  const [showDatasetOverview, setShowDatasetOverview] = useState(false)
   const [showAnalysisPanel, setShowAnalysisPanel] = useState(true)
   const [userClosedAnalysis, setUserClosedAnalysis] = useState(false)
   const [showFileExplorer, setShowFileExplorer] = useState(true)
@@ -75,7 +77,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="h-screen flex flex-col bg-gray-50">
-        <Header onSearchResults={handleSearchResults} />
+        <Header 
+          onSearchResults={handleSearchResults} 
+          onDatasetOverview={() => setShowDatasetOverview(true)}
+        />
         
         <main className="flex-1 flex overflow-hidden">
           {/* Left Sidebar - File Explorer */}
@@ -204,6 +209,12 @@ function App() {
             filteredRecords={filters.size > 0 ? currentFile.total_records : undefined}
           />
         )}
+
+        {/* Dataset Overview Modal */}
+        <DatasetOverviewModal
+          isOpen={showDatasetOverview}
+          onClose={() => setShowDatasetOverview(false)}
+        />
       </div>
     </QueryClientProvider>
   )

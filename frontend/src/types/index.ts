@@ -206,3 +206,48 @@ export interface SearchState {
   isSearching: boolean
   results?: SearchResponse
 }
+
+// Dataset Overview Types
+export interface DatasetOverview {
+  basic_info: {
+    total_records: number
+    total_columns: number
+    file_size: number
+    load_time?: number
+  }
+  data_quality: {
+    total_null_ratio: number
+    empty_rows: number
+    empty_columns: number
+    completeness_score: number
+  }
+  column_stats: ColumnStatsDetail[]
+  type_distribution: Record<string, number>
+}
+
+export interface ColumnStatsDetail {
+  name: string
+  data_type: string
+  null_count: number
+  null_ratio: number
+  unique_count: number
+  top_values: Array<{ value: string; count: number }>
+  text_stats?: {
+    avg_length: number
+    max_length: number
+    min_length: number
+    empty_strings: number
+  }
+  numeric_stats?: {
+    mean: number
+    median: number
+    std: number
+    min: number
+    max: number
+  }
+  date_stats?: {
+    min_date: string
+    max_date: string
+    invalid_dates: number
+  }
+}
