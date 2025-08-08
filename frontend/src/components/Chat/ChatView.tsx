@@ -10,18 +10,24 @@ interface Message {
 }
 
 const parseChatML = (content: string): Message[] => {
-  const messages: Message[] = [];
-  const regex = /<\|im_start\|>(\w+)\n([\s\S]*?)<\|im_end\|>/g;
-  let match;
+  try {
+    const messages: Message[] = [];
+    // More robust regex: allows for optional whitespace around the role and an optional newline after it.
+    const regex = /<\|im_start\|>\s*(\w+)\s*\n?([\s\S]*?)<\|im_end\|>/g;
+    let match;
 
-  while ((match = regex.exec(content)) !== null) {
-    messages.push({
-      role: match[1],
-      content: match[2].trim(),
-    });
+    while ((match = regex.exec(content)) !== null) {
+      messages.push({
+        role: match[1],
+        content: match[2].trim(),
+      });
+    }
+
+    return messages;
+  } catch (error) {
+    console.error("Failed to parse ChatML content:", error);
+    return []; // Return an empty array on error to avoid crashing.
   }
-
-  return messages;
 };
 
 const ChatView: React.FC<ChatViewProps> = ({ content }) => {
