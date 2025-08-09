@@ -1,11 +1,46 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Eye, Copy, MessageSquare } from 'lucide-react'
-import ChatView from '../Chat/ChatView'
+import ChatView, { Message } from '../Chat/ChatView'
 
-// Helper to check for ChatML format
-const isChatML = (content: any): content is string => {
-  return typeof content === 'string' && content.includes('<|im_start|>') && content.includes('<|im_end|>');
+const parseConversation = (value: any): Message[] | null => {
+  // 1. Try parsing as a JSON array of messages
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed) && parsed.length > 0 && 'from' in parsed[0] && 'value' in parsed[0]) {
+        return parsed.map((item: any) => ({
+          role: item.from === 'human' ? 'user' : item.from, // Map 'human' to 'user'
+          content: item.value
+        }));
+      }
+    } catch (e) {
+      // Not a valid JSON, proceed to check for ChatML format
+    }
+  }
+
+  // 2. Try parsing as ChatML string format
+  if (typeof value === 'string' && value.includes('<|im_start|>') && value.includes('<|im_end|>')) {
+    try {
+      const messages: Message[] = [];
+      const regex = /<\|im_start\|>\s*(\w+)\s*\n?([\s\S]*?)<\|im_end\|>/g;
+      let match;
+      while ((match = regex.exec(value)) !== null) {
+        messages.push({
+          role: match[1],
+          content: match[2].trim(),
+        });
+      }
+      if (messages.length > 0) {
+        return messages;
+      }
+    } catch (error) {
+      console.error("Failed to parse ChatML content:", error);
+      return null;
+    }
+  }
+
+  return null;
 };
 
 interface DataCellProps {
@@ -18,13 +53,13 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex }) => {
   const [showModal, setShowModal] = useState(false)
   const [viewMode, setViewMode] = useState<'raw' | 'chat'>('raw')
 
-  const isChatContent = isChatML(value);
+  const conversationMessages = parseConversation(value);
 
   useEffect(() => {
     if (showModal) {
-      setViewMode(isChatContent ? 'chat' : 'raw');
+      setViewMode(conversationMessages ? 'chat' : 'raw');
     }
-  }, [showModal, isChatContent]);
+  }, [showModal, conversationMessages]);
 
 
   // ESC 키로 모달 닫기
@@ -184,7 +219,7 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex }) => {
             </div>
             
             <div className="p-2 border-b border-gray-200">
-              {isChatContent && (
+              {conversationMessages && (
                 <div className="flex space-x-1">
                   <button
                     onClick={() => setViewMode('chat')}
@@ -204,8 +239,8 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex }) => {
             </div>
 
             <div className="flex-1 overflow-auto">
-              {viewMode === 'chat' && isChatContent ? (
-                <ChatView content={value} />
+              {viewMode === 'chat' && conversationMessages ? (
+                <ChatView messages={conversationMessages} />
               ) : (
                 <div className="p-4">
                   {isComplexObject ? (

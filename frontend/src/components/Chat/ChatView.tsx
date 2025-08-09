@@ -1,46 +1,15 @@
 import React from 'react';
 
-interface ChatViewProps {
-  content: string;
-}
-
-interface Message {
+export interface Message {
   role: string;
   content: string;
 }
 
-const parseChatML = (content: string): Message[] => {
-  try {
-    const messages: Message[] = [];
-    // More robust regex: allows for optional whitespace around the role and an optional newline after it.
-    const regex = /<\|im_start\|>\s*(\w+)\s*\n?([\s\S]*?)<\|im_end\|>/g;
-    let match;
+interface ChatViewProps {
+  messages: Message[];
+}
 
-    while ((match = regex.exec(content)) !== null) {
-      messages.push({
-        role: match[1],
-        content: match[2].trim(),
-      });
-    }
-
-    return messages;
-  } catch (error) {
-    console.error("Failed to parse ChatML content:", error);
-    return []; // Return an empty array on error to avoid crashing.
-  }
-};
-
-const ChatView: React.FC<ChatViewProps> = ({ content }) => {
-  const messages = parseChatML(content);
-
-  if (messages.length === 0) {
-    return (
-      <div className="p-4 text-gray-500">
-        Could not parse ChatML content. Displaying raw text instead.
-        <pre className="whitespace-pre-wrap mt-2 text-sm bg-gray-50 p-4 rounded border">{content}</pre>
-      </div>
-    );
-  }
+const ChatView: React.FC<ChatViewProps> = ({ messages }) => {
 
   const getRoleClasses = (role: string) => {
     switch (role.toLowerCase()) {
