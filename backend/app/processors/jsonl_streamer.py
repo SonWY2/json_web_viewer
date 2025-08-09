@@ -35,37 +35,45 @@ class JSONLStreamer:
         count = 0
         record_index = 0
         
-        with self._open_file() as f:
-            for line in f:
-                if record_index < start_offset:
-                    record_index += 1
-                    continue
-                
-                line = line.strip()
-                if not line:
-                    continue
-                
-                try:
-                    record = json.loads(line)
-                    yield record
-                    count += 1
+        try:
+            with self._open_file() as f:
+                for line in f:
+                    if record_index < start_offset:
+                        record_index += 1
+                        continue
                     
-                    if limit and count >= limit:
-                        break
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    try:
+                        record = json.loads(line)
+                        yield record
+                        count += 1
                         
-                except json.JSONDecodeError as e:
-                    # Skip invalid JSON lines
-                    continue
-                
-                record_index += 1
+                        if limit and count >= limit:
+                            break
+
+                    except json.JSONDecodeError:
+                        # Skip invalid JSON lines
+                        continue
+
+                    record_index += 1
+        except UnicodeDecodeError:
+            print(f"Warning: UnicodeDecodeError in {self.file_path}. The file may not be a valid text file.")
+            return
     
     def count_records(self) -> int:
         """Count total records in file"""
         count = 0
-        with self._open_file() as f:
-            for line in f:
-                if line.strip():
-                    count += 1
+        try:
+            with self._open_file() as f:
+                for line in f:
+                    if line.strip():
+                        count += 1
+        except UnicodeDecodeError:
+            print(f"Warning: UnicodeDecodeError in {self.file_path}. Could not count records.")
+            return 0
         return count
     
     def sample_records(self, sample_size: int = 1000) -> List[Dict[str, Any]]:
@@ -73,22 +81,26 @@ class JSONLStreamer:
         records = []
         count = 0
         
-        with self._open_file() as f:
-            for line in f:
-                if count >= sample_size:
-                    break
-                
-                line = line.strip()
-                if not line:
-                    continue
-                
-                try:
-                    record = json.loads(line)
-                    records.append(record)
-                    count += 1
-                except json.JSONDecodeError:
-                    continue
-        
+        try:
+            with self._open_file() as f:
+                for line in f:
+                    if count >= sample_size:
+                        break
+
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    try:
+                        record = json.loads(line)
+                        records.append(record)
+                        count += 1
+                    except json.JSONDecodeError:
+                        continue
+        except UnicodeDecodeError:
+            print(f"Warning: UnicodeDecodeError in {self.file_path}. Could not sample records.")
+            return []
+
         return records
     
     def get_file_info(self) -> Dict[str, Any]:
