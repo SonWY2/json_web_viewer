@@ -108,25 +108,6 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
     return allColumnsInOrder.filter(c => visibleColumns.includes(c.name))
   }, [allColumnsInOrder, visibleColumns])
 
-  const calculateInitialColumnWidths = React.useCallback(() => {
-    if (!currentFile) return
-    
-    const visibleCols = visibleColumnsInOrder
-    if (visibleCols.length === 0) return
-    
-    const hasExistingWidths = visibleCols.some(col => columnWidths[col.name])
-    if (hasExistingWidths) return
-    
-    // Set default width to 150px instead of calculating based on screen width
-    const defaultWidth = 150
-    
-    visibleCols.forEach(col => {
-      if (!columnWidths[col.name]) {
-        setColumnWidth(col.name, defaultWidth)
-      }
-    })
-  }, [currentFile, visibleColumnsInOrder, columnWidths, setColumnWidth])
-
   useEffect(() => {
     if (currentFile) {
       const mockDataChunk = {
@@ -140,9 +121,8 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
         schema: currentFile.columns
       }
       setCurrentData(mockDataChunk)
-      calculateInitialColumnWidths() // Call directly
     }
-  }, [currentFile, setCurrentData, calculateInitialColumnWidths])
+  }, [currentFile, setCurrentData])
 
   useImperativeHandle(ref, () => ({
     handleGlobalSearchResults: (results: SearchResponse | null) => {
