@@ -96,12 +96,10 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex }) => {
     ? displayValue.substring(0, 100) + '...' 
     : displayValue
 
-  const handleCellClick = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    console.log('Cell clicked:', rowIndex, column) // 디버깅용
-    setShowModal(true)
-  }
+  const handleOpenModal = (defaultView: 'raw' | 'chat' = 'raw') => {
+    setViewMode(defaultView);
+    setShowModal(true);
+  };
 
   const handleCopy = async () => {
     try {
@@ -132,17 +130,14 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex }) => {
             >
               {isLongContent ? (
                 <span 
-                  className="cursor-pointer hover:bg-blue-50 rounded block overflow-hidden text-ellipsis p-1 whitespace-pre-line"
-                  onClick={handleCellClick}
-                  title="Click to view full content"
+                  className="rounded block overflow-hidden text-ellipsis p-1 whitespace-pre-line"
+                  title={displayValue}
                 >
                   {truncatedValue}
                 </span>
               ) : (
                 <span 
-                  className="cursor-pointer hover:bg-blue-50 rounded block overflow-hidden p-1 whitespace-pre-line"
-                  onClick={handleCellClick}
-                  title="Click to view content"
+                  className="rounded block overflow-hidden p-1 whitespace-pre-line"
                 >
                   {displayValue}
                 </span>
@@ -155,25 +150,32 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex }) => {
                 minHeight: '20px'
               }}
             >
-              <span 
-                className="text-gray-400 italic text-xs block cursor-pointer hover:bg-blue-50 rounded overflow-hidden p-1 whitespace-pre-line"
-                onClick={handleCellClick}
-                title="Click to view content"
-              >
+              <span className="text-gray-400 italic text-xs block rounded overflow-hidden p-1 whitespace-pre-line">
                 null
               </span>
             </div>
           )}
           
-          {(isLongContent || isComplexObject) && (
-            <button
-              onClick={handleCellClick}
-              className="absolute top-1 right-1 p-0.5 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
-              title="View full content"
-            >
-              <Eye className="w-2 h-2" />
-            </button>
-          )}
+          <div className="absolute top-1 right-1 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {conversationMessages && (
+              <button
+                onClick={() => handleOpenModal('chat')}
+                className="p-0.5 text-gray-400 hover:text-blue-600"
+                title="View as Conversation"
+              >
+                <MessageSquare className="w-3 h-3" />
+              </button>
+            )}
+            {(isLongContent || isComplexObject) && !conversationMessages && (
+              <button
+                onClick={() => handleOpenModal('raw')}
+                className="p-0.5 text-gray-400 hover:text-blue-600"
+                title="View full content"
+              >
+                <Eye className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         </div>
       </td>
 
