@@ -133,6 +133,14 @@ const DataGrid = forwardRef<DataGridRef>((props, ref) => {
 
   useEffect(() => {
     if (currentFile) {
+      // Reset states for new file
+      setSortRules([])
+      setFilters(new Map())
+      setColumnSearches(new Map())
+      setSearchResults(null)
+      setCurrentPage(1)
+      setJumpToPage('')
+
       loadData(1)
     }
   }, [currentFile])
