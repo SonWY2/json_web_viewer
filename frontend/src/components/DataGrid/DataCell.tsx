@@ -124,7 +124,12 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex }) => {
       >
         <div className="relative w-full h-full">
           <div 
-            className="w-full h-full overflow-hidden"
+            className={`w-full h-full overflow-hidden ${isLongContent || isComplexObject ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+            onClick={() => {
+              if (isLongContent || isComplexObject) {
+                handleOpenModal(conversationMessages ? 'chat' : 'raw');
+              }
+            }}
           >
             {displayValue ? (
               <div 
