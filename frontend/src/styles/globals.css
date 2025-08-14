@@ -71,20 +71,11 @@ body {
   pointer-events: auto !important;
 }
 
-/* 첫 번째 row의 모든 클릭 가능 요소들 */
-.data-grid-table tbody tr:first-child td *,
-.data-grid-table tbody tr:first-child td span,
-.data-grid-table tbody tr:first-child td div {
-  position: relative;
-  z-index: 16 !important;
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
+
 
 .data-grid-table td,
 .data-grid-table th {
   border-left: none;
-  border-right: none;
   margin: 0;
   padding: 0 !important;
   box-sizing: border-box;
@@ -110,8 +101,7 @@ body {
   box-sizing: border-box;
 }
 
-.data-grid-table td span,
-.data-grid-table td div {
+.data-grid-table td span {
   width: 100% !important;
   display: block !important;
 }

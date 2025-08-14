@@ -4,7 +4,22 @@ import { Eye, Copy, MessageSquare } from 'lucide-react'
 import ChatView, { Message } from '../Chat/ChatView'
 
 const parseConversation = (value: any): Message[] | null => {
-  // 1. Try parsing as a JSON array of messages
+  // 1. Handle if the value is already a parsed array of objects
+  if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && value[0] !== null) {
+    const firstItem = value[0];
+    // Check for common chat structures
+    if ('role' in firstItem && 'content' in firstItem) {
+      return value as Message[]; // Assume it matches the Message interface
+    }
+    if ('from' in firstItem && 'value' in firstItem) {
+      return value.map((item: any) => ({
+        role: item.from === 'human' ? 'user' : item.from,
+        content: item.value
+      }));
+    }
+  }
+
+  // 2. Try parsing as a JSON string
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value);
@@ -19,7 +34,7 @@ const parseConversation = (value: any): Message[] | null => {
     }
   }
 
-  // 2. Try parsing as ChatML string format
+  // 3. Try parsing as ChatML string format
   if (typeof value === 'string' && value.includes('<|im_start|>') && value.includes('<|im_end|>')) {
     try {
       const messages: Message[] = [];
@@ -54,13 +69,6 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex }) => {
   const [viewMode, setViewMode] = useState<'raw' | 'chat'>('raw')
 
   const conversationMessages = parseConversation(value);
-
-  useEffect(() => {
-    if (showModal) {
-      setViewMode(conversationMessages ? 'chat' : 'raw');
-    }
-  }, [showModal, conversationMessages]);
-
 
   // ESC 키로 모달 닫기
   useEffect(() => {
@@ -112,64 +120,63 @@ const DataCell: React.FC<DataCellProps> = ({ value, column, rowIndex }) => {
   return (
     <>
       <td 
-        className="px-2 py-1 text-sm text-gray-900 border-b border-gray-200 group relative"
-        style={{ 
-          overflow: 'hidden'
-        }}
+        className="px-2 py-1 text-sm text-gray-900 border-b border-r border-gray-200 group"
       >
-        <div 
-          className="w-full h-full overflow-hidden"
-        >
-          {displayValue ? (
-            <div 
-              className="text-xs leading-relaxed overflow-hidden p-1 rounded whitespace-pre-line"
-              style={{ 
-                minHeight: '20px',
-                wordBreak: 'break-word'
-              }}
-            >
-              {isLongContent ? (
-                <span 
-                  className="rounded block overflow-hidden text-ellipsis p-1 whitespace-pre-line"
-                  title={displayValue}
-                >
-                  {truncatedValue}
+        <div className="relative w-full h-full">
+          <div 
+            className="w-full h-full overflow-hidden"
+          >
+            {displayValue ? (
+              <div 
+                className="text-xs leading-relaxed overflow-hidden p-1 rounded whitespace-pre-line"
+                style={{ 
+                  minHeight: '20px',
+                  wordBreak: 'break-word'
+                }}
+              >
+                {isLongContent ? (
+                  <span 
+                    className="rounded block overflow-hidden text-ellipsis p-1 whitespace-pre-line"
+                    title={displayValue}
+                  >
+                    {truncatedValue}
+                  </span>
+                ) : (
+                  <span 
+                    className="rounded block overflow-hidden p-1 whitespace-pre-line"
+                  >
+                    {displayValue}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div 
+                className="overflow-hidden p-1 rounded"
+                style={{ 
+                  minHeight: '20px'
+                }}
+              >
+                <span className="text-gray-400 italic text-xs block rounded overflow-hidden p-1 whitespace-pre-line">
+                  null
                 </span>
-              ) : (
-                <span 
-                  className="rounded block overflow-hidden p-1 whitespace-pre-line"
-                >
-                  {displayValue}
-                </span>
-              )}
-            </div>
-          ) : (
-            <div 
-              className="overflow-hidden p-1 rounded"
-              style={{ 
-                minHeight: '20px'
-              }}
-            >
-              <span className="text-gray-400 italic text-xs block rounded overflow-hidden p-1 whitespace-pre-line">
-                null
-              </span>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
           
-          <div className="absolute top-1 right-1 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute top-1 right-1 flex items-center space-x-1">
             {conversationMessages && (
               <button
                 onClick={() => handleOpenModal('chat')}
-                className="p-0.5 text-gray-400 hover:text-blue-600"
+                className="p-1 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors"
                 title="View as Conversation"
               >
-                <MessageSquare className="w-3 h-3" />
+                <MessageSquare className="w-4 h-4" />
               </button>
             )}
             {(isLongContent || isComplexObject) && !conversationMessages && (
               <button
                 onClick={() => handleOpenModal('raw')}
-                className="p-0.5 text-gray-400 hover:text-blue-600"
+                className="p-0.5 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
                 title="View full content"
               >
                 <Eye className="w-3 h-3" />

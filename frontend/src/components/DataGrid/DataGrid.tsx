@@ -35,7 +35,7 @@ const ResizableHeader: React.FC<ResizableHeaderProps> = ({ column, sortOrder, ha
 
   return (
     <th
-      className="bg-gray-50 border-b border-gray-200 p-0 relative select-none"
+      className="bg-gray-50 border-b border-r border-gray-200 p-0 relative select-none"
       style={{
         width: `${width}px`
       }}
